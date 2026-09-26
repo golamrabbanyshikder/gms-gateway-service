@@ -1,0 +1,43 @@
+<div class="container-fluid">
+    <div class="card">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-fingerprint"></i> Biometric Registration</h5>
+            <a th:href="@{/biometric/emergency-identification}" class="btn btn-sm btn-outline-primary">
+                <i class="fas fa-camera-retro"></i> Identify a Patient
+            </a>
+        </div>
+        <div class="card-body">
+            <form th:action="@{/biometric/register}" method="post" enctype="multipart/form-data">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="patientId" class="form-label">Select Patient</label>
+                        <select class="form-control" id="patientId" name="patientId" required>
+                            <option value="">Select Patient</option>
+                            <option th:each="patient : ${patients}" th:value="${patient.patientId}"
+                                    th:text="${patient.fullName} + ' (ID: ' + ${patient.patientId} + ')'"></option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="biometricType" class="form-label">Biometric Type</label>
+                        <select class="form-control" id="biometricType" name="biometricType" required>
+                            <option value="FINGERPRINT">Fingerprint</option>
+                            <option value="FACE">Face</option>
+                            <option value="IRIS">Iris</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label for="biometricFile" class="form-label">Biometric Sample File</label>
+                    <input type="file" class="form-control" id="biometricFile" name="biometricFile" required>
+                </div>
+                <div class="row">
+                    <div class="col-auto">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Enroll Biometric
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

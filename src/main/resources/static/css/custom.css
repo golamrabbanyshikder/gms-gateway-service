@@ -1,0 +1,412 @@
+/* GMS Custom Styles - Modern Healthcare Palette */
+:root {
+    /* GMS semantic palette */
+    --primary-color: #0B5ED7;      /* Medical Blue - navbar, buttons, main actions */
+    --primary-dark: #063970;       /* Deep Blue - headers, sidebar */
+    --secondary-color: #00A8A8;    /* Teal - health indicators, secondary accents */
+    --background-color: #F8FAFC;   /* Soft White - main page background */
+    --card-background: #FFFFFF;
+    --text-primary: #1E293B;       /* Dark Slate */
+    --text-secondary: #64748B;     /* Gray - labels, hints */
+    --border-color: #E2E8F0;       /* Light Gray */
+    --success-color: #16A34A;      /* Medical Green - approved, healthy status */
+    --warning-color: #F59E0B;      /* Amber - alerts */
+    --danger-color: #DC2626;       /* Emergency Red - critical patient alerts */
+
+    /* Re-theme every Bootstrap bg-*/text-*/border-* utility at the
+       root so they all pick up the GMS palette without needing a
+       manual override per utility class (Bootstrap 5.3's utilities
+       reference these custom properties directly). bg-info is mapped
+       to the teal secondary color since this app has no separate
+       "info" color in its palette and teal reads well as a neutral
+       accent (e.g. the doctors-count dashboard card). */
+    --bs-primary: #0B5ED7;
+    --bs-primary-rgb: 11, 94, 215;
+    --bs-secondary: #00A8A8;
+    --bs-secondary-rgb: 0, 168, 168;
+    --bs-success: #16A34A;
+    --bs-success-rgb: 22, 163, 74;
+    --bs-info: #00A8A8;
+    --bs-info-rgb: 0, 168, 168;
+    --bs-warning: #F59E0B;
+    --bs-warning-rgb: 245, 158, 11;
+    --bs-danger: #DC2626;
+    --bs-danger-rgb: 220, 38, 38;
+    --bs-body-bg: #F8FAFC;
+    --bs-body-color: #1E293B;
+    --bs-border-color: #E2E8F0;
+}
+
+body {
+    background-color: var(--background-color);
+    color: var(--text-primary);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.navbar-brand {
+    font-weight: bold;
+    color: var(--primary-color) !important;
+}
+
+.text-muted,
+.form-label {
+    color: var(--text-secondary) !important;
+}
+
+/* Collapsible sidebar */
+.gms-sidebar {
+    width: 250px;
+    flex-shrink: 0;
+    min-height: 100vh;
+    background-color: var(--primary-dark);
+    transition: width 0.2s ease;
+    overflow-x: hidden;
+}
+
+.gms-sidebar .list-group-item {
+    background-color: transparent;
+    border: none;
+    color: #fff;
+    padding: 12px 20px;
+    white-space: nowrap;
+}
+
+.gms-sidebar .list-group-item:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+    color: #fff;
+}
+
+.gms-sidebar .list-group-item.active {
+    background-color: var(--primary-color);
+    color: #fff;
+}
+
+html.gms-collapsed .gms-sidebar {
+    width: 70px;
+}
+
+html.gms-collapsed .gms-link-text {
+    display: none !important;
+}
+
+html.gms-collapsed .gms-sidebar-header {
+    flex-direction: column;
+    gap: 8px;
+    padding: 1rem 0.5rem !important;
+}
+
+html.gms-collapsed .gms-sidebar .list-group-item {
+    text-align: center;
+    padding: 12px 0;
+}
+
+html.gms-collapsed .gms-sidebar .list-group-item i {
+    margin-right: 0 !important;
+}
+
+#sidebarToggleBtn i {
+    transition: transform 0.2s ease;
+}
+
+html.gms-collapsed #sidebarToggleBtn i {
+    transform: rotate(180deg);
+}
+
+.card {
+    background-color: var(--card-background);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.card-header {
+    border-bottom: none;
+    border-left: 4px solid var(--primary-color);
+    background: linear-gradient(135deg, rgba(11, 94, 215, 0.08) 0%, rgba(0, 168, 168, 0.06) 100%) !important;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+    border-color: var(--primary-color);
+    box-shadow: 0 2px 6px rgba(11, 94, 215, 0.35);
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-color) 100%);
+    border-color: var(--primary-dark);
+    box-shadow: 0 4px 10px rgba(11, 94, 215, 0.45);
+}
+
+.btn-success {
+    background-color: var(--success-color);
+    border-color: var(--success-color);
+}
+
+.btn-success:hover {
+    background-color: #138a3d;
+    border-color: #138a3d;
+}
+
+.btn-danger {
+    background-color: var(--danger-color);
+    border-color: var(--danger-color);
+}
+
+.btn-warning {
+    background-color: var(--warning-color);
+    border-color: var(--warning-color);
+}
+
+.btn-secondary,
+.btn-info {
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
+    color: #fff;
+}
+
+.btn-secondary:hover,
+.btn-info:hover {
+    background-color: #008888;
+    border-color: #008888;
+    color: #fff;
+}
+
+.btn-outline-primary {
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.badge {
+    padding: 5px 10px;
+    font-size: 12px;
+}
+
+.table-hover tbody tr:hover {
+    background-color: #f1f5f9;
+}
+
+.table {
+    border-color: var(--border-color);
+}
+
+.form-control,
+.form-select {
+    border-color: var(--border-color);
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(11, 94, 215, 0.25);
+}
+
+.card-header h5 {
+    margin: 0;
+    font-size: 18px;
+    color: var(--primary-dark);
+    font-weight: 600;
+}
+
+.card-header h5 i {
+    color: var(--primary-color);
+}
+
+.gms-header {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+    border-bottom: none;
+}
+
+.gms-header h3 {
+    color: #fff;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+
+.statistic-card {
+    border-radius: 8px;
+    padding: 20px;
+    color: white;
+    margin-bottom: 20px;
+}
+
+.statistic-card h6 {
+    font-size: 14px;
+    opacity: 0.9;
+}
+
+.statistic-card h3 {
+    font-size: 32px;
+    font-weight: bold;
+}
+
+.bg-primary-custom {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+}
+
+.table thead {
+    background-color: #f8fafc;
+}
+
+.pagination {
+    gap: 5px;
+}
+
+.pagination .page-link {
+    border: 1px solid var(--border-color);
+    color: var(--primary-color);
+}
+
+.pagination .page-link:hover {
+    color: white;
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.pagination .page-item.active .page-link {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .gms-sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        transform: translateX(-100%);
+        z-index: 1000;
+    }
+
+    .gms-sidebar.show {
+        transform: translateX(0);
+    }
+}
+
+/* Charts */
+.chart-container {
+    position: relative;
+    height: 300px;
+    margin-bottom: 20px;
+}
+
+/* Alerts */
+.alert {
+    border: none;
+    border-radius: 8px;
+}
+
+.alert-success {
+    background-color: #dcfce7;
+    color: #14532d;
+}
+
+.alert-danger {
+    background-color: #fee2e2;
+    color: #7f1d1d;
+}
+
+.alert-warning {
+    background-color: #fef3c7;
+    color: #78350f;
+}
+
+.alert-info {
+    background-color: #cffafe;
+    color: #164e63;
+}
+
+/* Dropdown */
+.dropdown-menu {
+    border: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.dropdown-item:hover {
+    background-color: var(--background-color);
+    color: var(--primary-color);
+}
+
+/* Modal */
+.modal-content {
+    border: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.modal-header {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+}
+
+/* File Upload */
+.border-dashed {
+    border: 2px dashed var(--border-color) !important;
+}
+
+.border-dashed:hover {
+    border-color: var(--secondary-color) !important;
+    background-color: rgba(0, 168, 168, 0.05);
+}
+
+/* Tabs */
+.nav-tabs {
+    border-bottom: 2px solid var(--border-color);
+}
+
+.nav-tabs .nav-link {
+    color: var(--text-secondary);
+    border: none;
+    border-bottom: 3px solid transparent;
+}
+
+.nav-tabs .nav-link:hover {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+}
+
+.nav-tabs .nav-link.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+}
+
+/* Progress Bar */
+.progress {
+    height: 8px;
+    background-color: var(--border-color);
+}
+
+.progress-bar {
+    background-color: var(--primary-color);
+}
+
+/* Toast */
+.toast {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* Emergency / critical status accents (e.g. biometric emergency
+   identification, critical patient alerts) */
+.text-emergency {
+    color: var(--danger-color) !important;
+}
+
+.bg-emergency {
+    background-color: var(--danger-color) !important;
+    color: #fff !important;
+}
+
+.status-healthy {
+    color: var(--success-color);
+}
+
+.status-pending {
+    color: var(--warning-color);
+}
+
+.status-critical {
+    color: var(--danger-color);
+}

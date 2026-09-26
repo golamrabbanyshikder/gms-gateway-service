@@ -1,0 +1,80 @@
+<div class="container-fluid">
+    <div class="card">
+        <div class="card-header bg-light">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h5 class="mb-0"><i class="fas fa-users"></i> Patient Management</h5>
+                </div>
+                <div class="col-auto">
+                    <a th:href="@{/patients/create}" class="btn btn-primary btn-sm">
+                        <i class="fas fa-plus"></i> Add Patient
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <form th:if="${searchOnly}" method="get" th:action="@{/patients}" class="row g-2 mb-4">
+                <div class="col-auto">
+                    <input type="text" class="form-control" name="query" placeholder="Search by Patient ID or National ID" th:value="${query}">
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search"></i> Search
+                    </button>
+                </div>
+            </form>
+
+            <div th:if="${searchOnly and not isMyPatientsView and (query == null or #strings.isEmpty(query))}" class="alert alert-info">
+                For privacy, only direct patient lookups by ID or National ID are shown here &mdash; the full patient list is not browsable for your role.
+            </div>
+
+            <div th:if="${isMyPatientsView}" class="alert alert-info">
+                <i class="fas fa-user-md"></i> Showing patients you've treated. Use the search box above to look up any other patient by ID or National ID.
+            </div>
+
+            <div th:if="${notFound}" class="alert alert-warning">
+                No patient found matching that ID or National ID.
+            </div>
+
+            <div class="table-responsive" th:if="${not searchOnly} or ${isMyPatientsView} or ${not #lists.isEmpty(patients)}">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>DOB</th>
+                            <th>Gender</th>
+                            <th>Blood Group</th>
+                            <th>Contact</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:if="${#lists.isEmpty(patients)}">
+                            <td colspan="7" class="text-center text-muted">No patients found</td>
+                        </tr>
+                        <tr th:each="patient : ${patients}">
+                            <td th:text="${patient.patientId}"></td>
+                            <td th:text="${patient.fullName}"></td>
+                            <td th:text="${#temporals.format(patient.dateOfBirth, 'dd MMM yyyy')}"></td>
+                            <td th:text="${patient.gender}"></td>
+                            <td><span class="badge bg-primary" th:text="${patient.bloodGroup}"></span></td>
+                            <td th:text="${patient.mobileNo}"></td>
+                            <td>
+                                <a th:href="@{/patients/view/{id}(id=${patient.patientId})}" class="btn btn-sm btn-info" title="View">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a th:unless="${isDoctorRole}" th:href="@{/patients/edit/{id}(id=${patient.patientId})}" class="btn btn-sm btn-warning" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <a th:href="@{/patients/history/{id}(id=${patient.patientId})}" class="btn btn-sm btn-secondary" title="History">
+                                    <i class="fas fa-history"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

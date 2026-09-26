@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Prescription Preview</title>
+    <style>
+        body { font-family: Arial, Helvetica, sans-serif; color: #1E293B; padding: 24px; background: #fff; }
+        .rx-header { border-bottom: 3px solid #0B5ED7; padding-bottom: 12px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: flex-start; }
+        .rx-header h2 { color: #0B5ED7; margin: 0; font-size: 22px; }
+        .rx-header small { color: #64748B; }
+        .rx-meta { text-align: right; font-size: 14px; }
+        .rx-meta p { margin: 2px 0; }
+        .rx-info p { margin: 2px 0; font-size: 14px; }
+        .rx-symbol { font-size: 30px; font-weight: bold; color: #0B5ED7; margin: 20px 0 10px; }
+        .rx-section { margin-bottom: 18px; }
+        .rx-section h6 { color: #00A8A8; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px; margin-bottom: 4px; }
+        .rx-section p { white-space: pre-wrap; font-size: 15px; margin: 0; }
+        .rx-medicine { font-size: 15px; margin: 4px 0; padding-left: 14px; position: relative; }
+        .rx-medicine::before { content: "\2022"; color: #0B5ED7; position: absolute; left: 0; font-weight: bold; }
+        .not-found { color: #DC2626; font-size: 16px; }
+    </style>
+</head>
+<body>
+    <div th:if="${prescription == null}" class="not-found">Prescription not found.</div>
+    <div th:if="${prescription != null}">
+        <div class="rx-header">
+            <div>
+                <h2>Global Medical System</h2>
+                <small>Electronic Prescription</small>
+            </div>
+            <div class="rx-meta">
+                <p><strong>Prescription #</strong><span th:text="${prescription.prescriptionId}"></span></p>
+                <p th:text="${#temporals.format(prescription.createdAt, 'dd MMM yyyy, hh:mm a')}"></p>
+            </div>
+        </div>
+        <div class="rx-info">
+            <p><strong>Patient:</strong> <span th:text="${patientName != null ? patientName : ('Patient #' + prescription.patientId)}"></span></p>
+            <p><strong>Doctor:</strong> <span th:text="${doctorName != null ? doctorName : ('Doctor #' + prescription.doctorId)}"></span></p>
+            <p><strong>Hospital:</strong> <span th:text="${hospitalName != null ? hospitalName : ('Hospital #' + prescription.hospitalId)}"></span></p>
+            <p th:if="${prescription.diseases != null and not #strings.isEmpty(prescription.diseases)}">
+                <strong>Diseases:</strong> <span th:text="${prescription.diseases}"></span>
+            </p>
+        </div>
+        <div class="rx-symbol">&#8478;</div>
+        <div class="rx-section">
+            <h6>Medicines</h6>
+            <div th:if="${prescription.medicineList != null}">
+                <div class="rx-medicine" th:each="med : ${prescription.medicineList.split(';')}"
+                     th:if="${!med.trim().isEmpty()}" th:text="${med.trim()}"></div>
+            </div>
+        </div>
+        <div class="rx-section">
+            <h6>Instructions</h6>
+            <p th:text="${prescription.instructions}"></p>
+        </div>
+        <div class="rx-section">
+            <h6>Follow-up Date</h6>
+            <p th:text="${#temporals.format(prescription.followUpDate, 'dd MMM yyyy')}"></p>
+        </div>
+    </div>
+</body>
+</html>

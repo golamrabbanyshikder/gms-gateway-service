@@ -1,0 +1,81 @@
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-8">
+            <div th:if="${success}" class="alert alert-success">
+                <i class="fas fa-check-circle"></i> <span th:text="${success}"></span>
+            </div>
+            <div th:if="${user == null}" class="alert alert-warning">Could not load your account.</div>
+
+            <div th:if="${user != null}" class="card mb-3">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-user"></i> My Profile</h5>
+                </div>
+                <div class="card-body">
+                    <form th:action="@{/profile/edit}" method="post">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Username</label>
+                                <input type="text" class="form-control" th:value="${user.username}" disabled>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Role</label>
+                                <input type="text" class="form-control" th:value="${user.role}" disabled>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="fullName" class="form-label">Full Name</label>
+                                <input type="text" class="form-control" id="fullName" name="fullName" th:value="${user.fullName}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="email" class="form-label">Email</label>
+                                <input type="email" class="form-control" id="email" name="email" th:value="${user.email}">
+                            </div>
+                        </div>
+
+                        <div th:if="${doctor != null}">
+                            <hr>
+                            <h6 class="text-secondary">Professional Details</h6>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="specialization" class="form-label">Specialization</label>
+                                    <select class="form-control" id="specialization" name="specialization" required>
+                                        <option th:each="spec : ${specializations}" th:value="${spec.name}" th:text="${spec.name}"
+                                                th:selected="${spec.name == doctor.specialization}"></option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="licenseNumber" class="form-label">License Number</label>
+                                    <input type="text" class="form-control" id="licenseNumber" name="licenseNumber" th:value="${doctor.licenseNumber}" required>
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Hospital</label>
+                                    <input type="text" class="form-control"
+                                           th:value="${hospitalName != null ? hospitalName : ('Hospital #' + doctor.hospitalId)}" disabled>
+                                    <small class="text-muted">Hospital assignment is managed by an administrator.</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Save Changes
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-lock"></i> Password</h5>
+                </div>
+                <div class="card-body">
+                    <a th:href="@{/profile/change-password}" class="btn btn-outline-primary">
+                        <i class="fas fa-key"></i> Change Password
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

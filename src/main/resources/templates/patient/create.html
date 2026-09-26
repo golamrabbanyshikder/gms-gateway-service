@@ -1,0 +1,124 @@
+<div class="container-fluid">
+    <div class="card">
+        <div class="card-header bg-light">
+            <h5 class="mb-0"><i class="fas fa-user-plus"></i> Register New Patient</h5>
+        </div>
+        <div class="card-body">
+            <form id="patientForm" th:action="@{/patients/create}" method="post" enctype="multipart/form-data">
+                <div class="row mb-4">
+                    <h6 class="text-secondary"><i class="fas fa-user"></i> Personal Information</h6>
+                    <div class="col-md-6 mb-3">
+                        <label for="fullName" class="form-label">Full Name</label>
+                        <input type="text" class="form-control" id="fullName" name="fullName" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="nationalId" class="form-label">National ID</label>
+                        <input type="text" class="form-control" id="nationalId" name="nationalId" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="dateOfBirth" class="form-label">Date of Birth</label>
+                        <input type="date" class="form-control" id="dateOfBirth" name="dateOfBirth" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="gender" class="form-label">Gender</label>
+                        <select class="form-control" id="gender" name="gender" required>
+                            <option>Select Gender</option>
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row mb-4">
+                    <h6 class="text-secondary"><i class="fas fa-phone"></i> Contact Information</h6>
+                    <div class="col-md-6 mb-3">
+                        <label for="mobileNo" class="form-label">Mobile No</label>
+                        <input type="tel" class="form-control" id="mobileNo" name="mobileNo" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="bloodGroup" class="form-label">Blood Group</label>
+                        <select class="form-control" id="bloodGroup" name="bloodGroup" required>
+                            <option>Select Blood Group</option>
+                            <option value="O+">O+</option>
+                            <option value="O-">O-</option>
+                            <option value="A+">A+</option>
+                            <option value="A-">A-</option>
+                            <option value="B+">B+</option>
+                            <option value="B-">B-</option>
+                            <option value="AB+">AB+</option>
+                            <option value="AB-">AB-</option>
+                        </select>
+                    </div>
+                    <div class="col-md-12 mb-3">
+                        <label for="address" class="form-label">Address</label>
+                        <textarea class="form-control" id="address" name="address" rows="3" required></textarea>
+                    </div>
+                </div>
+
+                <div class="row mb-4">
+                    <h6 class="text-secondary"><i class="fas fa-camera"></i> Face Verification (required)</h6>
+                    <p class="text-muted small mb-2">
+                        Capture the patient's face now &mdash; this is what lets them be identified later from camera
+                        alone on a return visit, including emergency cases with no ID on them.
+                    </p>
+                    <div class="col-md-6 mb-3">
+                        <video id="faceVideo" width="320" height="240" style="display:none; background:#000; border-radius:6px;" muted></video>
+                        <canvas id="faceCanvas" style="display:none;"></canvas>
+                        <img id="facePreview" style="display:none; width:320px; border-radius:6px;" alt="Captured face">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <button type="button" id="faceStartBtn" class="btn btn-outline-primary mb-2">
+                            <i class="fas fa-video"></i> Open Camera
+                        </button>
+                        <br>
+                        <button type="button" id="faceCaptureBtn" class="btn btn-primary" disabled>
+                            <i class="fas fa-camera"></i> Capture Face
+                        </button>
+                        <div id="faceStatus" class="small mt-2 text-muted">Camera not started</div>
+                    </div>
+                    <input type="hidden" name="biometricType" value="FACE">
+                    <input type="file" id="biometricFile" name="biometricFile" style="display:none" accept="image/*">
+                </div>
+
+                <div class="row mb-4">
+                    <h6 class="text-secondary"><i class="fas fa-user-lock"></i> Patient Portal Access</h6>
+                    <div class="col-md-6 mb-3">
+                        <label for="portalPassword" class="form-label">Patient Portal Password (optional &mdash; leave blank to skip portal access for now)</label>
+                        <input type="password" class="form-control" id="portalPassword" name="portalPassword" autocomplete="new-password">
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-auto">
+                        <button type="submit" id="savePatientBtn" class="btn btn-primary" disabled>
+                            <i class="fas fa-save"></i> Save Patient
+                        </button>
+                        <a th:href="@{/patients}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cancel
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script th:src="@{/vendor/face-api.min.js}"></script>
+<script th:src="@{/js/face-capture.js}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        initFaceCapture({
+            videoId: 'faceVideo',
+            canvasId: 'faceCanvas',
+            startBtnId: 'faceStartBtn',
+            captureBtnId: 'faceCaptureBtn',
+            statusId: 'faceStatus',
+            fileInputId: 'biometricFile',
+            previewId: 'facePreview',
+            onCaptured: function () {
+                document.getElementById('savePatientBtn').disabled = false;
+            }
+        });
+    });
+</script>

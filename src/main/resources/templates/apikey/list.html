@@ -1,0 +1,162 @@
+<div class="container-fluid">
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0"><i class="fas fa-key"></i> Issue API Key</h5>
+        </div>
+        <div class="card-body">
+            <p class="text-muted small">
+                Issuing a key registers it identically in backend-service, biometric-service, and file-system-service,
+                so one key works across all three. External partners must send it on every request as the
+                <code>X-API-Key</code> header; requests without a valid key are rejected.
+            </p>
+
+            <div th:if="${error}" class="alert alert-danger">
+                <i class="fas fa-exclamation-circle"></i> <span th:text="${error}"></span>
+            </div>
+
+            <div th:if="${newlyIssuedKey}" class="alert alert-success">
+                <strong>Key issued:</strong> <code th:text="${newlyIssuedKey}"></code>
+                <div class="small mt-1">Copy this now &mdash; share it with the partner. It won't be shown in full again here.</div>
+            </div>
+
+            <form th:action="@{/api-keys/create}" method="post">
+                <div class="row g-2 mb-3">
+                    <div class="col-md-4">
+                        <input type="text" class="form-control" name="partnerName" placeholder="Partner / hospital name" required>
+                    </div>
+                </div>
+
+                <p class="text-muted small mb-2">
+                    Grant only the specific APIs this partner needs in each service &mdash; an unchecked permission
+                    means that resource's endpoints reject this key even though it's otherwise valid.
+                </p>
+
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <strong class="small">backend-service</strong>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="backendPermissions" value="PATIENT" id="backend-PATIENT">
+                            <label class="form-check-label small" for="backend-PATIENT">PATIENT</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="backendPermissions" value="DOCTOR" id="backend-DOCTOR">
+                            <label class="form-check-label small" for="backend-DOCTOR">DOCTOR</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="backendPermissions" value="HOSPITAL" id="backend-HOSPITAL">
+                            <label class="form-check-label small" for="backend-HOSPITAL">HOSPITAL</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="backendPermissions" value="PRESCRIPTION" id="backend-PRESCRIPTION">
+                            <label class="form-check-label small" for="backend-PRESCRIPTION">PRESCRIPTION</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="backendPermissions" value="REPORT" id="backend-REPORT">
+                            <label class="form-check-label small" for="backend-REPORT">REPORT</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="backendPermissions" value="AUDIT" id="backend-AUDIT">
+                            <label class="form-check-label small" for="backend-AUDIT">AUDIT</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <strong class="small">biometric-service</strong>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="biometricPermissions" value="ENROLL" id="biometric-ENROLL">
+                            <label class="form-check-label small" for="biometric-ENROLL">ENROLL</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="biometricPermissions" value="VERIFY" id="biometric-VERIFY">
+                            <label class="form-check-label small" for="biometric-VERIFY">VERIFY</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="biometricPermissions" value="IDENTIFY" id="biometric-IDENTIFY">
+                            <label class="form-check-label small" for="biometric-IDENTIFY">IDENTIFY</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="biometricPermissions" value="READ" id="biometric-READ">
+                            <label class="form-check-label small" for="biometric-READ">READ</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="biometricPermissions" value="DELETE" id="biometric-DELETE">
+                            <label class="form-check-label small" for="biometric-DELETE">DELETE</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <strong class="small">file-system-service</strong>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="fileSystemPermissions" value="UPLOAD" id="files-UPLOAD">
+                            <label class="form-check-label small" for="files-UPLOAD">UPLOAD</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="fileSystemPermissions" value="DOWNLOAD" id="files-DOWNLOAD">
+                            <label class="form-check-label small" for="files-DOWNLOAD">DOWNLOAD</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="fileSystemPermissions" value="READ" id="files-READ">
+                            <label class="form-check-label small" for="files-READ">READ</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="fileSystemPermissions" value="DELETE" id="files-DELETE">
+                            <label class="form-check-label small" for="files-DELETE">DELETE</label>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Issue Key
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header bg-light">
+            <h5 class="mb-0"><i class="fas fa-list"></i> Issued API Keys</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Partner</th>
+                            <th>Key</th>
+                            <th>Status</th>
+                            <th>Backend Permissions</th>
+                            <th>Issued</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:if="${#lists.isEmpty(apiKeys)}">
+                            <td colspan="6" class="text-center text-muted">No API keys issued yet</td>
+                        </tr>
+                        <tr th:each="key : ${apiKeys}">
+                            <td th:text="${key.partnerName}"></td>
+                            <td><code th:text="${key.apiKey}"></code></td>
+                            <td>
+                                <span th:if="${key.active}" class="badge bg-success">Active</span>
+                                <span th:unless="${key.active}" class="badge bg-secondary">Revoked</span>
+                                <span th:if="${key.admin}" class="badge bg-info">Internal</span>
+                            </td>
+                            <td>
+                                <span th:if="${key.admin}" class="text-muted small">All (internal)</span>
+                                <span th:if="${not key.admin and #strings.isEmpty(key.permissions)}" class="text-muted small">None</span>
+                                <span th:if="${not key.admin and not #strings.isEmpty(key.permissions)}" th:text="${key.permissions}"></span>
+                            </td>
+                            <td th:text="${#temporals.format(key.createdAt, 'dd MMM yyyy, hh:mm a')}"></td>
+                            <td>
+                                <form th:if="${key.active and not key.admin}" th:action="@{/api-keys/revoke}" method="post" class="d-inline">
+                                    <input type="hidden" name="apiKey" th:value="${key.apiKey}">
+                                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Revoke this key? The partner will immediately lose access to all 3 services.');">
+                                        <i class="fas fa-ban"></i> Revoke
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

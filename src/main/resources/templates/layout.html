@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${title} + ' - GMS'">Global Medical System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link th:href="@{/css/custom.css}" rel="stylesheet">
+    <script>
+        // Applied before paint so the sidebar doesn't flash expanded then
+        // immediately collapse on every full-page navigation.
+        if (localStorage.getItem('gmsSidebarCollapsed') === 'true') {
+            document.documentElement.classList.add('gms-collapsed');
+        }
+    </script>
+</head>
+<body>
+    <div class="d-flex" style="min-height: 100vh;">
+        <!-- Sidebar Navigation -->
+        <nav id="sidebarNav" class="gms-sidebar text-white p-0">
+            <div class="p-3 border-bottom border-secondary gms-sidebar-header d-flex align-items-center justify-content-between">
+                <a th:href="${isPatient != null and isPatient} ? @{/patient/dashboard} : @{/dashboard}" class="d-flex align-items-center gap-2 text-white text-decoration-none" title="Go to Dashboard">
+                    <i class="fas fa-hospital fs-5"></i>
+                    <div class="gms-link-text">
+                        <h5 class="mb-0 d-inline">GMS</h5>
+                        <div><small class="text-muted">Global Medical System</small></div>
+                    </div>
+                </a>
+                <button id="sidebarToggleBtn" type="button" class="btn btn-sm btn-outline-light border-0" title="Collapse sidebar">
+                    <i class="fas fa-angles-left"></i>
+                </button>
+            </div>
+            <div class="list-group list-group-flush" th:if="${isPatient}">
+                <a th:href="@{/patient/dashboard}" class="list-group-item" title="My Dashboard">
+                    <i class="fas fa-chart-line me-2"></i><span class="gms-link-text">My Dashboard</span>
+                </a>
+                <a th:href="@{/patient/booking}" class="list-group-item" title="My Appointments">
+                    <i class="fas fa-calendar-check me-2"></i><span class="gms-link-text">My Appointments</span>
+                </a>
+                <a th:href="@{/patient/booking/new}" class="list-group-item" title="Book Appointment">
+                    <i class="fas fa-calendar-plus me-2"></i><span class="gms-link-text">Book Appointment</span>
+                </a>
+                <a th:href="@{/patient/history}" class="list-group-item" title="My History">
+                    <i class="fas fa-history me-2"></i><span class="gms-link-text">My History</span>
+                </a>
+                <a th:href="@{/contacts/medical}" class="list-group-item" title="Medical Contact List">
+                    <i class="fas fa-address-book me-2"></i><span class="gms-link-text">Medical Contacts</span>
+                </a>
+                <a th:href="@{/contacts/appointment}" class="list-group-item" title="Appointment Contact List">
+                    <i class="fas fa-calendar-check me-2"></i><span class="gms-link-text">Appointment Contacts</span>
+                </a>
+            </div>
+            <div class="list-group list-group-flush" th:unless="${isPatient}">
+                <a th:href="@{/dashboard}" class="list-group-item" title="Dashboard">
+                    <i class="fas fa-chart-line me-2"></i><span class="gms-link-text">Dashboard</span>
+                </a>
+                <a th:href="@{/patients}" class="list-group-item" title="Patients">
+                    <i class="fas fa-users me-2"></i><span class="gms-link-text">Patients</span>
+                </a>
+                <a th:unless="${isDoctorRole}" th:href="@{/biometric/register}" class="list-group-item" title="Biometric">
+                    <i class="fas fa-fingerprint me-2"></i><span class="gms-link-text">Biometric</span>
+                </a>
+                <a th:href="@{/biometric/emergency-identification}" class="list-group-item" title="Identify Patient">
+                    <i class="fas fa-camera-retro me-2"></i><span class="gms-link-text">Identify Patient</span>
+                </a>
+                <a th:unless="${isDoctorRole}" th:href="@{/doctors}" class="list-group-item" title="Doctors">
+                    <i class="fas fa-stethoscope me-2"></i><span class="gms-link-text">Doctors</span>
+                </a>
+                <a th:unless="${isDoctorRole}" th:href="@{/hospitals}" class="list-group-item" title="Hospitals">
+                    <i class="fas fa-hospital me-2"></i><span class="gms-link-text">Hospitals</span>
+                </a>
+                <a th:href="@{/contacts/medical}" class="list-group-item" title="Medical Contact List">
+                    <i class="fas fa-address-book me-2"></i><span class="gms-link-text">Medical Contacts</span>
+                </a>
+                <a th:href="@{/contacts/appointment}" class="list-group-item" title="Appointment Contact List">
+                    <i class="fas fa-calendar-check me-2"></i><span class="gms-link-text">Appointment Contacts</span>
+                </a>
+                <a th:if="${isAdminRole}" th:href="@{/users}" class="list-group-item" title="Users">
+                    <i class="fas fa-user-tie me-2"></i><span class="gms-link-text">Users</span>
+                </a>
+                <a th:if="${isAdminRole}" th:href="@{/api-keys}" class="list-group-item" title="API Keys">
+                    <i class="fas fa-key me-2"></i><span class="gms-link-text">API Keys</span>
+                </a>
+                <a th:if="${isAdminRole}" th:href="@{/specializations}" class="list-group-item" title="Specializations">
+                    <i class="fas fa-stethoscope me-2"></i><span class="gms-link-text">Specializations</span>
+                </a>
+                <a th:if="${isAdminRole}" th:href="@{/diseases}" class="list-group-item" title="Diseases">
+                    <i class="fas fa-virus me-2"></i><span class="gms-link-text">Diseases</span>
+                </a>
+                <a th:unless="${isDoctorRole}" th:href="@{/audit}" class="list-group-item" title="Audit Logs">
+                    <i class="fas fa-history me-2"></i><span class="gms-link-text">Audit Logs</span>
+                </a>
+                <a th:href="@{/booking}" class="list-group-item" title="Appointments">
+                    <i class="fas fa-calendar-alt me-2"></i><span class="gms-link-text">Appointments</span>
+                </a>
+                <a th:href="@{/booking/new}" class="list-group-item" title="Book Appointment">
+                    <i class="fas fa-calendar-plus me-2"></i><span class="gms-link-text">Book Appointment</span>
+                </a>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <div class="flex-grow-1 gms-main">
+            <!-- Header -->
+            <header class="gms-header">
+                <div class="container-fluid p-3">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <h3 class="mb-0" th:text="${pageTitle}">Dashboard</h3>
+                        </div>
+                        <div class="col-auto">
+                            <div class="dropdown" id="userMenuDropdown">
+                                <button class="btn btn-light dropdown-toggle d-flex align-items-center" type="button"
+                                        id="userMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-user-circle fa-lg me-2"></i>
+                                    <span th:text="${username}">User</span>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenuButton">
+                                    <li th:unless="${isPatient}">
+                                        <a class="dropdown-item" th:href="@{/profile}">
+                                            <i class="fas fa-id-badge me-2"></i>My Profile
+                                        </a>
+                                    </li>
+                                    <li th:unless="${isPatient}"><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <a class="dropdown-item text-danger" th:href="@{/logout}">
+                                            <i class="fas fa-sign-out-alt me-2"></i>Logout
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Content -->
+            <main class="p-4">
+                <div th:if="${message}" class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="fas fa-check-circle"></i> <span th:text="${message}"></span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="fas fa-exclamation-circle"></i> <span th:text="${error}"></span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                <div th:insert="~{${view}}"></div>
+            </main>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3/dist/chart.min.js"></script>
+    <script th:src="@{/js/api-client.js}"></script>
+    <script th:src="@{/js/utils.js}"></script>
+</body>
+</html>

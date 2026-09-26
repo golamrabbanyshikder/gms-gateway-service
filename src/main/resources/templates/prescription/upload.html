@@ -1,0 +1,151 @@
+<div class="container-fluid">
+    <div class="card">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-file-upload"></i> Upload &amp; Extract Prescription</h5>
+            <a th:href="${preselectedPatientId != null} ? @{/patients/history/{id}(id=${preselectedPatientId})} : @{/patients}" class="btn btn-outline-primary btn-sm">
+                <i class="fas fa-arrow-left"></i> Back
+            </a>
+        </div>
+        <div class="card-body">
+            <div th:if="${error}" class="alert alert-danger">
+                <i class="fas fa-exclamation-circle"></i> <span th:text="${error}"></span>
+            </div>
+            <p class="text-muted small">
+                Select a scanned or photographed prescription (JPG/PNG), then click <strong>Extract Text</strong>.
+                The recognized text is filled into the Medicines field below &mdash; review and correct it (OCR isn't
+                perfect) before saving. The original image is stored alongside the extracted data.
+            </p>
+
+            <form th:action="@{/prescriptions/upload}" method="post" enctype="multipart/form-data">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="patientId" class="form-label">Select Patient</label>
+                        <select class="form-control" id="patientId" name="patientId" required>
+                            <option value="">Select Patient</option>
+                            <option th:each="patient : ${patients}" th:value="${patient.patientId}"
+                                    th:selected="${preselectedPatientId != null and preselectedPatientId == patient.patientId}"
+                                    th:text="${patient.fullName} + ' (ID: ' + ${patient.patientId} + ')'"></option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="hospitalFilter" class="form-label">Hospital</label>
+                        <select class="form-control" id="hospitalFilter" name="hospitalId" required>
+                            <option value="">Select Hospital</option>
+                            <option th:each="hospital : ${hospitals}" th:value="${hospital.hospitalId}"
+                                    th:text="${hospital.hospitalName}"></option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="specialization" class="form-label">Doctor Category</label>
+                        <select class="form-control" id="specialization" required disabled>
+                            <option value="">Select Hospital First</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="doctorId" class="form-label">Doctor</label>
+                        <select class="form-control" id="doctorId" name="doctorId" required disabled>
+                            <option value="">Select Category First</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="prescriptionFile" class="form-label">Prescription Image</label>
+                        <input type="file" id="prescriptionFile" name="prescriptionFile" class="form-control"
+                               accept="image/png, image/jpeg" required>
+                        <small class="text-muted">PNG or JPG. PDF isn't supported by the in-browser reader &mdash; convert to an image first.</small>
+                    </div>
+                    <div class="col-md-6 d-flex align-items-end">
+                        <button type="button" id="extractBtn" class="btn btn-info text-white" disabled>
+                            <i class="fas fa-wand-magic-sparkles"></i> Extract Text
+                        </button>
+                        <div id="ocrStatus" class="small text-muted ms-3"></div>
+                    </div>
+                </div>
+
+                <div class="mb-3" id="rawTextWrap" style="display:none;">
+                    <label class="form-label">Full Extracted Text (reference &mdash; copy anything relevant into Instructions)</label>
+                    <textarea id="rawText" class="form-control" rows="4" readonly></textarea>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <label class="form-label">Disease(s)</label>
+                        <div th:if="${#lists.isEmpty(diseases)}" class="text-muted small">
+                            No diseases configured.
+                        </div>
+                        <div th:unless="${#lists.isEmpty(diseases)}" class="border rounded p-2" style="max-height: 140px; overflow-y: auto;">
+                            <div class="form-check" th:each="disease : ${diseases}">
+                                <input class="form-check-input" type="checkbox" name="diseases"
+                                       th:value="${disease.name}" th:id="'disease-' + ${disease.diseaseId}">
+                                <label class="form-check-label" th:for="'disease-' + ${disease.diseaseId}"
+                                       th:text="${disease.name}"></label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <label for="medicineList" class="form-label">Medicines</label>
+                        <textarea class="form-control" id="medicineList" name="medicineList" rows="4"
+                                  placeholder="Click 'Extract Text' to fill from the image, or type the medicines manually." required></textarea>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <label for="instructions" class="form-label">Special Instructions</label>
+                        <textarea class="form-control" id="instructions" name="instructions" rows="3" required></textarea>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="followUpDate" class="form-label">Follow-up Date</label>
+                        <input type="date" class="form-control" id="followUpDate" name="followUpDate" required>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-auto">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Save Prescription
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script th:src="@{/vendor/tesseract/tesseract.min.js}"></script>
+<script th:src="@{/js/hospital-doctor-cascade.js}"></script>
+<script th:src="@{/js/prescription-ocr.js}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        initHospitalDoctorCascade({
+            hospitalSelectId: 'hospitalFilter',
+            specializationSelectId: 'specialization',
+            doctorSelectId: 'doctorId'
+        });
+        initPrescriptionOcr({
+            fileInputId: 'prescriptionFile',
+            extractBtnId: 'extractBtn',
+            statusId: 'ocrStatus',
+            rawTextId: 'rawText',
+            rawTextWrapId: 'rawTextWrap',
+            medicineListId: 'medicineList',
+            instructionsId: 'instructions',
+            followUpDateId: 'followUpDate',
+            patientSelectId: 'patientId',
+            hospitalSelectId: 'hospitalFilter',
+            specializationSelectId: 'specialization',
+            doctorSelectId: 'doctorId'
+        });
+    });
+</script>

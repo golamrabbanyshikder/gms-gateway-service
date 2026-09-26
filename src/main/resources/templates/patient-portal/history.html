@@ -1,0 +1,89 @@
+<div class="container-fluid">
+    <div class="card">
+        <div class="card-header bg-light">
+            <h5 class="mb-0"><i class="fas fa-history"></i> My Medical History</h5>
+        </div>
+        <div class="card-body">
+            <div th:if="${history == null}" class="alert alert-info">
+                No history yet. Once you have visits, reports, or prescriptions, they will show up here.
+            </div>
+
+            <div th:if="${history != null}">
+                <div class="row mb-4" th:if="${history.patient != null}">
+                    <div class="col-md-6">
+                        <p><strong>Name:</strong> <span th:text="${history.patient.fullName}"></span></p>
+                        <p><strong>National ID:</strong> <span th:text="${history.patient.nationalId}"></span></p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Blood Group:</strong> <span th:text="${history.patient.bloodGroup}"></span></p>
+                        <p><strong>Visit Count:</strong> <span th:text="${history.visitCount}"></span></p>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Type</th>
+                                <th>Category</th>
+                                <th>Summary</th>
+                                <th>Doctor</th>
+                                <th>Date</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:if="${#lists.isEmpty(history.items)}">
+                                <td colspan="6" class="text-center text-muted">No history yet</td>
+                            </tr>
+                            <tr th:each="item : ${history.items}">
+                                <td th:text="${item.recordType}"></td>
+                                <td th:text="${item.category}"></td>
+                                <td th:text="${item.summary}"></td>
+                                <td th:text="${item.doctorId}"></td>
+                                <td th:text="${#temporals.format(item.date, 'dd MMM yyyy, hh:mm a')}"></td>
+                                <td>
+                                    <button type="button" class="btn btn-sm btn-outline-primary"
+                                            th:if="${item.recordType == 'PRESCRIPTION'}"
+                                            th:attr="onclick=|showPreview('/patient/prescriptions/preview/${item.recordId}', 'Prescription #${item.recordId}')|">
+                                        <i class="fas fa-eye"></i> Preview
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary"
+                                            th:if="${item.recordType == 'REPORT'}"
+                                            th:attr="onclick=|showPreview('/patient/reports/preview/${item.recordId}', '${item.category}')|">
+                                        <i class="fas fa-eye"></i> Preview
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="modal fade" id="previewModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-lg modal-dialog-scrollable">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="previewModalTitle">Preview</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body p-0" style="height: 75vh;">
+                            <iframe id="previewFrame" src="" style="width: 100%; height: 100%; border: 0;"></iframe>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function showPreview(url, title) {
+        document.getElementById('previewFrame').src = url;
+        document.getElementById('previewModalTitle').textContent = title;
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('previewModal')).show();
+    }
+    document.getElementById('previewModal').addEventListener('hidden.bs.modal', function () {
+        document.getElementById('previewFrame').src = '';
+    });
+</script>

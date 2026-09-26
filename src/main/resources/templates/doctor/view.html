@@ -1,0 +1,35 @@
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <div th:if="${doctor == null}" class="alert alert-warning">Doctor not found.</div>
+            <div th:if="${doctor != null}" class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-stethoscope"></i> Doctor Profile</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Doctor ID:</strong> <span th:text="${doctor.doctorId}"></span></p>
+                            <p><strong>Name:</strong> <span th:text="${doctor.name}"></span></p>
+                            <p><strong>Specialization:</strong> <span class="badge bg-info" th:text="${doctor.specialization}"></span></p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Hospital:</strong> <span th:text="${hospitalName != null ? hospitalName : ('Hospital #' + doctor.hospitalId)}"></span></p>
+                            <p><strong>License No:</strong> <span th:text="${doctor.licenseNumber}"></span></p>
+                            <p><strong>Registered:</strong> <span th:text="${#temporals.format(doctor.createdAt, 'dd MMM yyyy, hh:mm a')}"></span></p>
+                        </div>
+                    </div>
+                    <a th:href="@{/doctors/performance}" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-chart-line"></i> View Performance
+                    </a>
+                    <a th:href="@{/doctors/edit/{id}(id=${doctor.doctorId})}" class="btn btn-warning btn-sm">
+                        <i class="fas fa-edit"></i> Edit
+                    </a>
+                    <a th:href="@{/doctors}" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-arrow-left"></i> Back to List
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

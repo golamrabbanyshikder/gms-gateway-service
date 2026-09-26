@@ -1,0 +1,1015 @@
+<div class="container-fluid" id="bookingApp">
+    <div class="card">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-calendar-plus"></i> Book a New Appointment</h5>
+            <div class="d-flex gap-2 align-items-center">
+                <span v-if="voiceAvailable === false && !browserSpeechSupported"
+                      class="badge bg-secondary"
+                      title="Voice capture isn't available here. Please type your request in the box below.">
+                    <i class="fas fa-microphone-slash"></i> Voice unavailable
+                </span>
+                <button v-show="!recording && !processing"
+                        id="micBtn"
+                        type="button"
+                        class="btn btn-outline-primary btn-sm"
+                        @click="startVoiceCapture">
+                    <i class="fas fa-microphone"></i> Speak your request
+                </button>
+                <button v-show="recording"
+                        id="micStopBtn"
+                        type="button"
+                        class="btn btn-danger btn-sm"
+                        @click="stopVoiceCapture">
+                    <span class="recording-dot me-1"></span>
+                    <i class="fas fa-stop"></i> Stop ({{ recordingSeconds }}s)
+                </button>
+                <button v-show="processing"
+                        type="button"
+                        class="btn btn-primary btn-sm" disabled>
+                    <i class="fas fa-spinner fa-spin"></i> Processing…
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <div v-if="globalError" class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i> {{ globalError }}
+            </div>
+
+            <!-- Voice-feedback panel: transcript preview, translation badge,
+                 and clarifying questions. Hidden by default; appears once
+                 the user invokes the mic or text-fill button. -->
+            <div v-show="voiceFeedbackVisible" class="alert alert-info py-2 mb-3"
+                 style="display:none">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1 me-2">
+                        <strong>
+                            <i class="fas fa-robot"></i> Voice fill:
+                        </strong>
+                        <span v-if="translated" class="badge bg-success ms-1">
+                            <i class="fas fa-language"></i> Bangla &rarr; English
+                        </span>
+                        <span v-if="extractionStatus === 'COMPLETE'" class="badge bg-success ms-1">
+                            <i class="fas fa-check"></i> Complete
+                        </span>
+                        <span v-else-if="extractionStatus === 'MISSING_FIELDS'" class="badge bg-warning text-dark ms-1">
+                            <i class="fas fa-exclamation-circle"></i> Some fields missing
+                        </span>
+                        <div v-if="voiceTranscript" class="mt-1 small">
+                            <strong>Heard:</strong>
+                            <em>"{{ voiceTranscript }}"</em>
+                            <span v-if="translatedText && translatedText !== voiceTranscript">
+                                <br><strong>Translated:</strong>
+                                <em>"{{ translatedText }}"</em>
+                            </span>
+                        </div>
+                        <div v-if="clarifyingQuestions.length > 0" class="mt-1 small">
+                            <strong>Please clarify:</strong>
+                            <ul class="mb-0">
+                                <li v-for="q in clarifyingQuestions" :key="q">{{ q }}</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" aria-label="Close"
+                            @click="voiceFeedbackVisible = false"></button>
+                </div>
+            </div>
+
+            <!-- Text-input fallback. Same extraction pipeline as the mic path,
+                 so users without a working mic can still get auto-fill by
+                 typing their request in Bangla or English. -->
+            <div class="card mb-3 border-primary">
+                <div class="card-body py-2">
+                    <label for="voiceTextInput" class="form-label small mb-1">
+                        <i class="fas fa-keyboard"></i>
+                        Or type your request (Bangla or English) and press
+                        <strong>Fill from text</strong>:
+                    </label>
+                    <div class="input-group">
+                        <input id="voiceTextInput"
+                               type="text"
+                               class="form-control"
+                               placeholder="e.g. আমার সোমবার সকালে কার্ডিওলজিস্টের কাছে অ্যাপয়েন্টমেন্ট দরকার"
+                               v-model="voiceTextInput"
+                               @keyup.enter="submitVoiceText">
+                        <button class="btn btn-primary" type="button"
+                                :disabled="processing || !voiceTextInput.trim()"
+                                @click="submitVoiceText">
+                            <i class="fas fa-magic"></i> Fill from text
+                        </button>
+                    </div>
+                    <small class="text-muted">
+                        Try: <em>"I need a cardiologist appointment next Monday at 10 AM
+                        for chest pain"</em> or the Bangla equivalent.
+                    </small>
+                </div>
+            </div>
+
+            <form th:action="@{/patient/booking/create}" method="post" @submit="onSubmit">
+                <!-- Hospital -->
+                <div class="row mb-3">
+                    <h6 class="text-secondary"><i class="fas fa-hospital"></i> Hospital &amp; Doctor</h6>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Hospital <span class="text-danger">*</span></label>
+                        <select id="hospitalSelect" class="form-select" name="hospitalId" v-model="hospitalId" @change="onHospitalChange" required>
+                            <option value="">Select hospital</option>
+                            <option v-for="h in hospitals" :key="h.hospitalId" :value="h.hospitalId">
+                                {{ h.hospitalName }} — {{ h.city }}
+                            </option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Doctor <span class="text-danger">*</span></label>
+                        <select class="form-select" name="doctorId" v-model="doctorId" @change="reloadAvailabilityAndSlots" required>
+                            <option value="">Select doctor</option>
+                            <option v-for="d in filteredDoctors" :key="d.doctorId" :value="d.doctorId">
+                                {{ d.name }} — {{ d.specialization }}
+                            </option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Date & Time -->
+                <div class="row mb-3">
+                    <h6 class="text-secondary"><i class="fas fa-calendar-day"></i> Date &amp; Time</h6>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Date <span class="text-danger">*</span></label>
+                        <input type="date" class="form-control" name="appointmentDate"
+                               v-model="appointmentDate" :min="today" @change="reloadSlots" required>
+                        <small class="text-muted">
+                            <span v-if="calendarLoading"><i class="fas fa-spinner fa-spin"></i> Checking availability…</span>
+                            <span v-else-if="availabilitySummary">{{ availabilitySummary }}</span>
+                        </small>
+                        <div class="mt-2 small text-muted">
+                            <span class="badge bg-success me-1">&nbsp;</span> Open
+                            <span class="badge bg-secondary ms-2 me-1">&nbsp;</span> Full
+                            <span class="badge bg-light text-dark ms-2 me-1">&nbsp;</span> No schedule
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Preferred Time
+                            <span class="text-muted small">(leave blank to auto-assign next slot)</span>
+                        </label>
+                        <select class="form-select" name="preferredTime" v-model="preferredTime">
+                            <option value="">Auto-assign next open slot</option>
+                            <option v-for="s in slots" :key="s.startTime"
+                                    :value="s.startTime" :disabled="!s.available">
+                                {{ s.startTime }} - {{ s.endTime }}{{ s.available ? '' : ' (booked)' }}
+                            </option>
+                        </select>
+
+                        <div v-if="slotInfo" class="alert alert-info py-2 mt-2 mb-0">
+                            <small>
+                                <strong>Doctor hours:</strong> {{ slotInfo.dayStartTime }} - {{ slotInfo.dayEndTime }}<br>
+                                <strong>Slots:</strong> {{ slotInfo.remainingSlots }} of {{ slotInfo.totalSlots }} remaining
+                                <span v-if="autoRefreshEnabled" class="ms-2 text-success">
+                                    <i class="fas fa-circle" style="font-size:0.5em"></i> Live
+                                </span>
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-if="fullyBooked" class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    আজকের জন্য আর কোনো অ্যাপয়েন্টমেন্ট স্লট খালি নেই। অনুগ্রহ করে পরবর্তী দিন বেছে নিন।
+                    <br><small>(No remaining slots on this date. Please pick another date.)</small>
+                </div>
+
+                <!-- Visit info -->
+                <div class="row mb-3">
+                    <h6 class="text-secondary"><i class="fas fa-notes-medical"></i> Reason for Visit</h6>
+                    <div class="col-md-12 mb-3">
+                        <label class="form-label">Reason / Symptoms (optional)</label>
+                        <textarea id="reasonField" class="form-control" name="reasonForVisit" rows="3"
+                                  v-model="reasonForVisit"
+                                  placeholder="Briefly describe your symptoms or the purpose of the visit."></textarea>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-auto">
+                        <button type="submit" class="btn btn-primary" :disabled="submitting || fullyBooked">
+                            <i class="fas fa-save" v-if="!submitting"></i>
+                            <i class="fas fa-spinner fa-spin" v-else></i>
+                            Confirm Booking
+                        </button>
+                        <a th:href="@{/patient/booking}" class="btn btn-link">Cancel</a>
+                    </div>
+                </div>
+
+                <input type="hidden" name="voiceTranscript" :value="voiceTranscript">
+            </form>
+        </div>
+    </div>
+
+    <!-- Missing-field banner. Pre-rendered with display:none so the page
+         is calm before Vue parses; v-show flips it on when the user tries
+         to submit a form with one or more empty required fields. -->
+    <div v-show="missingFields.length > 0" class="alert alert-warning mt-3"
+         style="display:none" role="alert" aria-live="polite">
+        <strong><i class="fas fa-exclamation-circle"></i> Please complete the highlighted fields before booking:</strong>
+        <ul class="mb-0 mt-1">
+            <li v-for="m in missingFields" :key="m">{{ m }}</li>
+        </ul>
+    </div>
+</div>
+
+<style>
+    /* Pulsing red dot for the active recording state. */
+    .recording-dot {
+        display: inline-block;
+        width: 0.6em;
+        height: 0.6em;
+        background: #fff;
+        border-radius: 50%;
+        animation: voice-pulse 1s ease-in-out infinite;
+    }
+    @keyframes voice-pulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.4; transform: scale(0.7); }
+    }
+    /* Brief highlight on form fields the voice fill just populated so the
+       user sees what was extracted. Fades out after ~2 seconds. */
+    .voice-filled-flash {
+        animation: voice-flash 2s ease-out;
+    }
+    @keyframes voice-flash {
+        0% { background-color: #fff3cd; }
+        100% { background-color: transparent; }
+    }
+</style>
+
+<script th:inline="javascript">
+document.addEventListener('DOMContentLoaded', function () {
+    // Pre-load hospitals and doctors from server-rendered model so the
+    // single-page form has the data without an extra fetch round. Each
+    // Thymeleaf inline-JS substitution site must be its own marker on a
+    // single line - you cannot embed multiple substitutions on one line
+    // with JS code between them, because Thymeleaf parses the surrounding
+    // text as SpEL and chokes on the JS. Pull server-side values into
+    // named consts first, then reference the consts in data().
+    const ALL_HOSPITALS = /*[[${hospitals}]]*/ [];
+    const ALL_DOCTORS = /*[[${doctors}]]*/ [];
+    const PRESELECTED_DOCTOR_ID = /*[[${preselectedDoctorId}]]*/ null;
+    const PRESELECTED_DATE = /*[[${preselectedDate}]]*/ null;
+    const URL_VOICE_TRANSCRIBE = /*[[@{/patient/booking/voice/transcribe}]]*/ '/patient/booking/voice/transcribe';
+    const URL_VOICE_EXTRACT = /*[[@{/patient/booking/voice/extract}]]*/ '/patient/booking/voice/extract';
+    const URL_VOICE_AVAILABLE = /*[[@{/api/voice/available}]]*/ '/api/voice/available';
+
+    const app = Vue.createApp({
+        data() {
+            return {
+                hospitals: ALL_HOSPITALS || [],
+                doctors: ALL_DOCTORS || [],
+                hospitalId: '',
+                doctorId: PRESELECTED_DOCTOR_ID != null ? String(PRESELECTED_DOCTOR_ID) : '',
+                appointmentDate: PRESELECTED_DATE || '',
+                preferredTime: '',
+                reasonForVisit: '',
+                contactNumber: '',
+                contactEmail: '',
+                // Whether the browser exposes SpeechRecognition. Computed once at mount.
+                browserSpeechSupported: !!(window.SpeechRecognition || window.webkitSpeechRecognition),
+                // ===== Voice-fill state =====
+                // voiceAvailable: null=probing, true/false=server result
+                voiceAvailable: null,
+                recording: false,
+                processing: false,
+                recordingSeconds: 0,
+                _recordingTimer: null,
+                _mediaRecorder: null,
+                _mediaStream: null,
+                _recordedChunks: [],
+                voiceTranscript: '',
+                translatedText: '',
+                translated: false,
+                extractionStatus: '',
+                clarifyingQuestions: [],
+                voiceFeedbackVisible: false,
+                voiceTextInput: '',
+                missingFields: [],
+                slots: [],
+                slotInfo: null,
+                fullyBooked: false,
+                availabilitySummary: '',
+                calendarLoading: false,
+                submitting: false,
+                globalError: '',
+                today: new Date().toISOString().split('T')[0],
+                autoRefreshEnabled: false,
+                _autoRefreshTimer: null
+            };
+        },
+        computed: {
+            filteredDoctors() {
+                if (!this.hospitalId) return this.doctors;
+                return this.doctors.filter(d => String(d.hospitalId) === String(this.hospitalId));
+            }
+        },
+        methods: {
+            onHospitalChange() {
+                // Reset downstream state when hospital changes.
+                this.doctorId = '';
+                this.appointmentDate = '';
+                this.preferredTime = '';
+                this.slots = [];
+                this.slotInfo = null;
+                this.fullyBooked = false;
+                this.availabilitySummary = '';
+                this.stopAutoRefresh();
+                // Clear the validation highlight once the user picks something.
+                const el = document.getElementById('hospitalSelect');
+                if (el) el.classList.remove('is-invalid');
+            },
+            async reloadAvailabilityAndSlots() {
+                if (!this.doctorId) return;
+                this.calendarLoading = true;
+                // Clear the validation highlight once a doctor is picked.
+                const docSel = document.querySelector('select[name=doctorId]');
+                if (docSel) docSel.classList.remove('is-invalid');
+                try {
+                    const r = await fetch('/patient/booking/availability?doctorId=' + this.doctorId + '&days=14');
+                    const data = await r.json();
+                    const open = (data || []).filter(d => !d.fullyBooked && d.remainingSlots > 0).length;
+                    const total = (data || []).length;
+                    if (total === 0) {
+                        this.availabilitySummary = 'This doctor has no schedule in the next 14 days.';
+                    } else {
+                        this.availabilitySummary = open + ' of ' + total + ' upcoming days have open slots.';
+                    }
+                } catch (e) {
+                    this.availabilitySummary = 'Could not load calendar availability.';
+                } finally {
+                    this.calendarLoading = false;
+                }
+                this.reloadSlots();
+            },
+            reloadSlots() {
+                if (!this.doctorId || !this.appointmentDate) {
+                    this.slots = [];
+                    this.slotInfo = null;
+                    this.fullyBooked = false;
+                    // Clear the validation highlight if a date was just picked.
+                    if (this.appointmentDate) {
+                        const dateEl = document.querySelector('input[type=date]');
+                        if (dateEl) dateEl.classList.remove('is-invalid');
+                    }
+                    this.stopAutoRefresh();
+                    return;
+                }
+                fetch('/patient/booking/slots?doctorId=' + this.doctorId + '&date=' + this.appointmentDate,
+                    { headers: { 'Accept': 'application/json' } })
+                    .then(r => r.ok ? r.json() : Promise.reject(r))
+                    .then(data => {
+                        if (!data.available) {
+                            this.slots = [];
+                            this.slotInfo = null;
+                            this.fullyBooked = true;
+                            this.stopAutoRefresh();
+                            return;
+                        }
+                        this.slots = data.slots;
+                        this.slotInfo = data;
+                        this.fullyBooked = !!data.fullyBooked;
+                        if (this.preferredTime && !this.slots.find(s => s.startTime === this.preferredTime && s.available)) {
+                            this.preferredTime = '';
+                        }
+                        this.startAutoRefresh();
+                    })
+                    .catch(() => {
+                        this.slots = [];
+                        this.slotInfo = null;
+                        this.fullyBooked = true;
+                        this.stopAutoRefresh();
+                    });
+            },
+            startAutoRefresh() {
+                this.stopAutoRefresh();
+                // Poll the slots endpoint every 10s so a slot booked by another
+                // user from a different tab disappears from this user's grid
+                // without a manual refresh.
+                this._autoRefreshTimer = setInterval(() => {
+                    if (!this.doctorId || !this.appointmentDate) {
+                        this.stopAutoRefresh();
+                        return;
+                    }
+                    fetch('/patient/booking/slots?doctorId=' + this.doctorId + '&date=' + this.appointmentDate,
+                        { headers: { 'Accept': 'application/json' } })
+                        .then(r => r.ok ? r.json() : Promise.reject(r))
+                        .then(data => {
+                            if (!data.available) { this.fullyBooked = true; this.slots = []; return; }
+                            this.slots = data.slots;
+                            this.slotInfo = data;
+                            this.fullyBooked = !!data.fullyBooked;
+                            this.autoRefreshEnabled = true;
+                            if (this.preferredTime && !this.slots.find(s => s.startTime === this.preferredTime && s.available)) {
+                                this.preferredTime = '';
+                            }
+                        })
+                        .catch(() => {});
+                }, 10000);
+            },
+            stopAutoRefresh() {
+                this.autoRefreshEnabled = false;
+                if (this._autoRefreshTimer) { clearInterval(this._autoRefreshTimer); this._autoRefreshTimer = null; }
+            },
+
+            // =================================================================
+            // Voice-fill pipeline (Mic -> MediaRecorder -> /voice/transcribe)
+            //                              -> Whisper STT -> Claude extract
+            //                              -> structured auto-fill
+            // =================================================================
+
+            async probeVoiceAvailability() {
+                // Probe /api/voice/available on page load so we hide the mic
+                // button when the server-side speech-to-text stack isn't
+                // configured. Failures are non-fatal — the user can still
+                // type into the text-input fallback.
+                try {
+                    const r = await fetch(URL_VOICE_AVAILABLE, { headers: { 'Accept': 'application/json' } });
+                    if (!r.ok) { this.voiceAvailable = false; return; }
+                    const data = await r.json();
+                    this.voiceAvailable = !!data.whisperAvailable;
+                } catch (e) {
+                    this.voiceAvailable = false;
+                }
+            },
+
+            async startVoiceCapture() {
+                this.globalError = '';
+                this.voiceFeedbackVisible = true;
+
+                // Path 1: Browser Web Speech API (free, zero-latency, no API
+                // key needed). Works on Chrome/Edge for English and on some
+                // setups for bn-BD / bn-IN. We try this first because it
+                // skips the upload round-trip entirely.
+                if (this.browserSpeechSupported) {
+                    const transcript = await this.tryBrowserSpeechRecognition();
+                    if (transcript && transcript.trim().length > 0) {
+                        await this.submitVoiceTranscriptText(transcript);
+                        return;
+                    }
+                    // Browser SR either failed or returned nothing — fall
+                    // through to the MediaRecorder path.
+                }
+
+                // Path 2: MediaRecorder upload to server Whisper. Only works
+                // when OPENAI_API_KEY is configured on the server.
+                if (this.voiceAvailable && navigator.mediaDevices
+                    && navigator.mediaDevices.getUserMedia
+                    && window.MediaRecorder) {
+                    await this.startMediaRecording();
+                    return;
+                }
+
+                // Path 3: nothing worked. Tell the user clearly and point
+                // them at the text-input box, which goes through the same
+                // Claude translation+extraction pipeline as the mic path.
+                this.globalError = 'Voice input isn’t available on this machine. '
+                    + 'Please type your request in the box below in Bangla or English '
+                    + '— it goes through the same translation and form-fill pipeline.';
+            },
+
+            /**
+             * Browser-side SpeechRecognition wrapper. Returns the final
+             * transcript, or null/empty when the engine fails / produces no
+             * Bengali or English text. Caller decides what to do next.
+             */
+            tryBrowserSpeechRecognition() {
+                return new Promise((resolve) => {
+                    const SpeechRecognition = window.SpeechRecognition
+                        || window.webkitSpeechRecognition;
+                    if (!SpeechRecognition) { resolve(''); return; }
+
+                    const recognition = new SpeechRecognition();
+                    // Bengali (Bangladesh) primary, fall back to bn-IN inside
+                    // the session if the first lang returns nothing.
+                    recognition.lang = 'bn-BD';
+                    recognition.interimResults = false;
+                    recognition.continuous = false;
+                    recognition.maxAlternatives = 1;
+
+                    let finalTranscript = '';
+                    this.recording = true;
+                    this.recordingSeconds = 0;
+                    this._recordingTimer = setInterval(() => {
+                        this.recordingSeconds += 1;
+                        if (this.recordingSeconds >= 30) {
+                            try { recognition.stop(); } catch (e) { /* ignore */ }
+                        }
+                    }, 1000);
+
+                    recognition.onresult = (event) => {
+                        for (let i = event.resultIndex; i < event.results.length; i++) {
+                            if (event.results[i].isFinal) {
+                                finalTranscript += event.results[i][0].transcript;
+                            }
+                        }
+                    };
+                    recognition.onerror = (e) => {
+                        // Empty error is the common "no-speech" case — treat
+                        // it as no result and let the caller fall through.
+                        this.finishRecordingUi();
+                        resolve('');
+                        // Surface non-no-speech errors so the user knows
+                        // what happened.
+                        if (e.error && e.error !== 'no-speech' && e.error !== 'aborted') {
+                            this.globalError = 'Browser speech recognition error: '
+                                + e.error + '. Please type your request instead.';
+                        }
+                    };
+                    recognition.onend = () => {
+                        this.finishRecordingUi();
+                        // If the first pass produced no Bengali-script
+                        // characters, retry once in bn-IN — the alternative
+                        // Bengali locale Chrome supports. Better to try
+                        // than to silently produce garbage.
+                        const hasBangla = /[ঀ-৿]/.test(finalTranscript);
+                        const hasLetters = /[A-Za-zঀ-৿]/.test(finalTranscript);
+                        if (!finalTranscript.trim() || (!hasBangla && !hasLetters)) {
+                            try {
+                                const retry = new SpeechRecognition();
+                                retry.lang = 'bn-IN';
+                                retry.interimResults = false;
+                                retry.continuous = false;
+                                this.recording = true;
+                                let retryTranscript = '';
+                                retry.onresult = (ev) => {
+                                    for (let i = ev.resultIndex; i < ev.results.length; i++) {
+                                        if (ev.results[i].isFinal) {
+                                            retryTranscript += ev.results[i][0].transcript;
+                                        }
+                                    }
+                                };
+                                retry.onend = () => {
+                                    this.finishRecordingUi();
+                                    resolve(retryTranscript);
+                                };
+                                retry.onerror = () => {
+                                    this.finishRecordingUi();
+                                    resolve(retryTranscript);
+                                };
+                                retry.start();
+                            } catch (e) {
+                                resolve(finalTranscript);
+                            }
+                        } else {
+                            resolve(finalTranscript);
+                        }
+                    };
+
+                    try {
+                        recognition.start();
+                    } catch (e) {
+                        this.finishRecordingUi();
+                        resolve('');
+                    }
+                });
+            },
+
+            finishRecordingUi() {
+                this.recording = false;
+                if (this._recordingTimer) {
+                    clearInterval(this._recordingTimer);
+                    this._recordingTimer = null;
+                }
+                this.recordingSeconds = 0;
+            },
+
+            /**
+             * MediaRecorder-based capture: records audio in the browser,
+             * uploads the resulting blob to /voice/transcribe, server runs
+             * Whisper STT + Claude extraction, response fills the form.
+             */
+            async startMediaRecording() {
+                const candidateTypes = [
+                    'audio/webm;codecs=opus',
+                    'audio/webm',
+                    'audio/ogg;codecs=opus',
+                    'audio/mp4'
+                ];
+                const mimeType = candidateTypes.find(t =>
+                    window.MediaRecorder && MediaRecorder.isTypeSupported(t)
+                ) || '';
+
+                try {
+                    this._mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                } catch (permErr) {
+                    this.globalError = 'Microphone access was blocked. '
+                        + 'Click the camera/mic icon in the address bar and allow access, '
+                        + 'then try again. (Error: ' + (permErr.name || permErr.message) + ')';
+                    return;
+                }
+
+                this._recordedChunks = [];
+                let recorder;
+                try {
+                    recorder = mimeType
+                        ? new MediaRecorder(this._mediaStream, { mimeType })
+                        : new MediaRecorder(this._mediaStream);
+                } catch (e) {
+                    this.releaseMediaStream();
+                    this.globalError = 'Could not start audio recording: ' + e.message;
+                    return;
+                }
+
+                recorder.ondataavailable = (ev) => {
+                    if (ev.data && ev.data.size > 0) this._recordedChunks.push(ev.data);
+                };
+                recorder.onstop = () => {
+                    this.releaseMediaStream();
+                    const blob = new Blob(this._recordedChunks, { type: mimeType || 'audio/webm' });
+                    this._recordedChunks = [];
+                    if (blob.size === 0) {
+                        this.globalError = 'No audio was captured. Please try again.';
+                        return;
+                    }
+                    this.uploadVoiceAudio(blob);
+                };
+
+                this._mediaRecorder = recorder;
+                this.recording = true;
+                this.recordingSeconds = 0;
+                this._recordingTimer = setInterval(() => {
+                    this.recordingSeconds += 1;
+                    // Cap at 60s — longer recordings blow up the upload and
+                    // the user can always press Stop early.
+                    if (this.recordingSeconds >= 60) this.stopVoiceCapture();
+                }, 1000);
+
+                recorder.start();
+            },
+
+            stopVoiceCapture() {
+                if (this._recordingTimer) {
+                    clearInterval(this._recordingTimer);
+                    this._recordingTimer = null;
+                }
+                if (this._mediaRecorder && this._mediaRecorder.state !== 'inactive') {
+                    try { this._mediaRecorder.stop(); } catch (e) { /* ignore */ }
+                }
+                this.recording = false;
+            },
+
+            releaseMediaStream() {
+                if (this._mediaStream) {
+                    this._mediaStream.getTracks().forEach(t => t.stop());
+                    this._mediaStream = null;
+                }
+            },
+
+            async uploadVoiceAudio(blob) {
+                this.processing = true;
+                try {
+                    const form = new FormData();
+                    const ext = (blob.type && blob.type.includes('mp4')) ? 'm4a'
+                        : (blob.type && blob.type.includes('ogg')) ? 'ogg' : 'webm';
+                    form.append('audio', blob, 'recording.' + ext);
+                    const r = await fetch(URL_VOICE_TRANSCRIBE, {
+                        method: 'POST',
+                        body: form
+                    });
+                    const data = await r.json().catch(() => ({}));
+                    if (!r.ok) {
+                        // 503 = server-side Whisper not configured. Tell the
+                        // user to use the text-input box instead, which goes
+                        // through the same Claude extraction pipeline.
+                        if (r.status === 503 || (data && data.status === 'unavailable')) {
+                            this.globalError = 'Server-side voice transcription is not configured. '
+                                + 'Please type your request in the box below — '
+                                + 'it goes through the same translation and form-fill pipeline.';
+                            this.voiceAvailable = false;
+                        } else {
+                            this.globalError = (data && data.message)
+                                || ('Voice fill failed (HTTP ' + r.status + '). Please type your request instead.');
+                        }
+                        return;
+                    }
+                    this.handleExtractionResponse(data);
+                } catch (e) {
+                    this.globalError = 'Could not upload the audio. Please type your request instead.';
+                } finally {
+                    this.processing = false;
+                }
+            },
+
+            async submitVoiceText() {
+                const text = (this.voiceTextInput || '').trim();
+                if (!text) return;
+                await this.submitVoiceTranscriptText(text);
+            },
+
+            /**
+             * Shared text-extraction entry point used by the text-input box,
+             * the browser Web Speech API path, and any future input channel.
+             */
+            async submitVoiceTranscriptText(transcript) {
+                this.processing = true;
+                this.globalError = '';
+                try {
+                    const r = await fetch(URL_VOICE_EXTRACT, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: 'transcript=' + encodeURIComponent(transcript)
+                    });
+                    const data = await r.json().catch(() => ({}));
+                    if (!r.ok) {
+                        this.globalError = (data && data.message)
+                            || ('Voice fill failed (HTTP ' + r.status + ').');
+                        return;
+                    }
+                    this.handleExtractionResponse(data);
+                } catch (e) {
+                    this.globalError = 'Could not process the request. Please try again.';
+                } finally {
+                    this.processing = false;
+                }
+            },
+
+            /**
+             * Shared handler for both /voice/transcribe (audio) and
+             * /voice/extract (text). Server response shape is identical, so
+             * the rest of the UI logic doesn't care which input channel the
+             * user picked.
+             */
+            handleExtractionResponse(data) {
+                if (!data) {
+                    this.globalError = 'Empty response from server.';
+                    return;
+                }
+
+                // The server sends a typed structured extraction object so we
+                // never have to parse pipe-delimited reasonForVisit strings —
+                // each field is its own property.
+                const ex = data.extracted || {};
+                const fields = data.fields || {};
+
+                this.voiceTranscript = data.rawTranscript || fields.voiceTranscript || '';
+                this.translatedText = ex.translatedText || '';
+                this.translated = !!data.translated;
+                this.extractionStatus = data.status || '';
+                this.clarifyingQuestions = Array.isArray(data.clarifyingQuestions)
+                    ? data.clarifyingQuestions.slice() : [];
+                this.missingFields = Array.isArray(data.missingFields)
+                    ? data.missingFields.slice() : [];
+                this.voiceFeedbackVisible = true;
+
+                // ----- Apply extracted fields to the form -----
+                // Voice fill always wins over pre-filled defaults — the user
+                // explicitly spoke a value, so we apply it. The flash-highlight
+                // makes every change visible so they can verify or undo.
+
+                // Hospital: when the agentic AI ran with DB context it
+                // returns a resolved hospitalId straight from the live
+                // catalog — prefer that over fuzzy substring match (which
+                // would fail on transliteration variants like "ল্যাবিট").
+                if (ex.hospitalId) {
+                    this.applyHospital(ex.hospitalId);
+                } else if (ex.hospitalName) {
+                    const wanted = ex.hospitalName.toLowerCase();
+                    const hit = this.hospitals.find(h =>
+                        (h.hospitalName || '').toLowerCase().includes(wanted)
+                        || wanted.includes((h.hospitalName || '').toLowerCase())
+                    );
+                    if (hit) this.applyHospital(hit.hospitalId);
+                    else if (this.hospitals.length === 1) this.applyHospital(this.hospitals[0].hospitalId);
+                }
+
+                // Doctor: same priority — matched ID from the agent wins,
+                // fall back to name fuzzy match, then specialization match.
+                if (ex.doctorId) {
+                    const doc = (this.doctors || []).find(d =>
+                        String(d.doctorId) === String(ex.doctorId));
+                    if (doc) this.applyDoctor(doc);
+                }
+                if (!this.doctorId && ex.doctorName) {
+                    const hit = this.findDoctorByName(ex.doctorName);
+                    if (hit) this.applyDoctor(hit);
+                }
+                if (!this.doctorId && ex.specialization) {
+                    const wanted = ex.specialization.toLowerCase();
+                    const hit = this.doctors.find(d =>
+                        (d.specialization || '').toLowerCase().includes(wanted)
+                    );
+                    if (hit) this.applyDoctor(hit);
+                }
+
+                // Date — LocalDate serialises as "YYYY-MM-DD" on the wire.
+                if (ex.appointmentDate) {
+                    this.applyDate(ex.appointmentDate);
+                }
+
+                // Time — "HH:mm" or "HH:mm:ss"; pick from the slot dropdown
+                // when possible, otherwise stash raw for the auto-assign path.
+                if (ex.preferredTime) {
+                    const normalised = String(ex.preferredTime).substring(0, 5);
+                    this.preferredTime = normalised;
+                    this.flashField('select[name=preferredTime]');
+                }
+
+                // Reason for visit — the server's cleaned English complaint.
+                if (ex.reasonForVisit) {
+                    this.reasonForVisit = ex.reasonForVisit;
+                    this.flashField('#reasonField');
+                }
+
+                // Contact number / email if provided.
+                // The backend-service pulls contact from the patient record on
+                // its own, but we surface it in the DTO for audit.
+                if (fields.contactNumber) this.contactNumber = fields.contactNumber;
+                if (fields.contactEmail) this.contactEmail = fields.contactEmail;
+
+                // If everything was filled, trim the missing-fields list to
+                // empty so the banner collapses.
+                this.refreshMissingFields();
+            },
+
+            applyHospital(hospitalId) {
+                this.hospitalId = String(hospitalId);
+                this.flashField('#hospitalSelect');
+                // Drop any doctor/date that belonged to the old hospital.
+                this.doctorId = '';
+                this.appointmentDate = '';
+                this.preferredTime = '';
+                this.slots = [];
+                this.slotInfo = null;
+                this.fullyBooked = false;
+            },
+
+            applyDoctor(doctor) {
+                // If hospital wasn't picked yet, set it from the doctor.
+                if (!this.hospitalId && doctor.hospitalId) {
+                    this.hospitalId = String(doctor.hospitalId);
+                }
+                this.doctorId = String(doctor.doctorId);
+                this.flashField('select[name=doctorId]');
+                this.reloadAvailabilityAndSlots();
+            },
+
+            /**
+             * Resolve a server-extracted doctor name against the local doctor
+             * list. The server may return either a Latin name (already
+             * transliterated) or a partial Bangla name fragment, so we run
+             * three passes — exact-substring first, then token-level fuzzy
+             * match (e.g. "shamsul" matches "Dr. Md. Shamsul Haque"), then
+             * reverse-substring for very short inputs.
+             */
+            findDoctorByName(wanted) {
+                if (!wanted) return null;
+                const norm = String(wanted).toLowerCase().trim();
+                if (!norm) return null;
+                const candidates = this.doctors || [];
+
+                // Pass 1: full substring match — server name is contained
+                // inside the doctor's full name.
+                let hit = candidates.find(d => (d.name || '').toLowerCase().includes(norm));
+                if (hit) return hit;
+
+                // Pass 2: token-level match — split both sides on whitespace
+                // and count how many of the server's tokens appear inside
+                // the doctor's name. Best-overlap wins. Handles the case
+                // where the server returns a transliterated Bangla name
+                // like "shamsul haq" — the "shamsul" token matches "Dr. Md.
+                // Shamsul Haque" but the full-string match fails because of
+                // transliteration drift (hok vs haque).
+                const wantTokens = norm.split(/\s+/).filter(t => t.length >= 2);
+                if (wantTokens.length === 0) return null;
+                let best = null;
+                let bestScore = 0;
+                for (const d of candidates) {
+                    const docName = (d.name || '').toLowerCase();
+                    let score = 0;
+                    for (const t of wantTokens) {
+                        if (docName.includes(t)) score += t.length;
+                    }
+                    if (score > bestScore) {
+                        bestScore = score;
+                        best = d;
+                    }
+                }
+                return bestScore >= 3 ? best : null;
+            },
+
+            applyDate(dateStr) {
+                // dateStr is "YYYY-MM-DD" — already the format <input type=date>
+                // expects. If the user already picked something we don't
+                // overwrite.
+                this.appointmentDate = dateStr;
+                this.flashField('input[type=date]');
+                if (this.doctorId) this.reloadSlots();
+            },
+
+            flashField(selector) {
+                this.$nextTick(() => {
+                    const el = document.querySelector(selector);
+                    if (el) {
+                        el.classList.add('voice-filled-flash');
+                        setTimeout(() => el.classList.remove('voice-filled-flash'), 2100);
+                    }
+                });
+            },
+
+            focusMissingField(name) {
+                // Map a validation field name to the corresponding form input.
+                // The CSS class .is-invalid paints a red border; we leave it on
+                // until the user changes the field's value so they can see the
+                // fix-take-effect on blur instead of having it auto-disappear.
+                const map = {
+                    hospital: 'select[v-model="hospitalId"], select.form-select:eq(0)',
+                    doctor: 'select[name=doctorId]',
+                    date: 'input[type=date]'
+                };
+                // The hospital selector is positional (first form-select on the
+                // page); fall back to a name lookup if the form structure
+                // changes. Prefer the name attribute when present.
+                if (name === 'hospital') {
+                    const el = document.querySelector('select[name=hospitalId]')
+                        || document.querySelector('#hospitalSelect')
+                        || document.querySelectorAll('select.form-select')[0];
+                    if (el) {
+                        el.classList.add('is-invalid');
+                        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        el.focus();
+                        return;
+                    }
+                }
+                const sel = map[name];
+                if (!sel) return;
+                const el = document.querySelector(sel);
+                if (el) {
+                    el.classList.add('is-invalid');
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    el.focus();
+                }
+            },
+            validateForm() {
+                // Build the missing-field list from current Vue state. Returns
+                // an array of human-readable names the banner renders directly.
+                const missing = [];
+                if (!this.hospitalId) missing.push('Hospital - please pick a hospital');
+                if (!this.doctorId) missing.push('Doctor - please pick a doctor');
+                if (!this.appointmentDate) missing.push('Date - please pick an appointment date');
+                return missing;
+            },
+            refreshMissingFields() {
+                // Trim the banner list as the user fixes fields, but only when
+                // it's already showing - don't pre-populate it on first load.
+                if (this.missingFields.length === 0) return;
+                this.missingFields = this.validateForm();
+            },
+            onSubmit() {
+                const missing = this.validateForm();
+                if (missing.length > 0) {
+                    // Don't submit. Show the banner and focus the first empty
+                    // required field so the user knows exactly what to fix.
+                    this.missingFields = missing;
+                    this.$nextTick(() => {
+                        const firstKey = !this.hospitalId ? 'hospital'
+                            : !this.doctorId ? 'doctor'
+                            : 'date';
+                        this.focusMissingField(firstKey);
+                    });
+                    return false;
+                }
+                // Clear stale validation state before the form actually posts.
+                this.missingFields = [];
+                this.submitting = true;
+                return true;
+            }
+        },
+        mounted() {
+            // Pre-fill doctor + hospital from URL or model attribute when the
+            // page was opened from the doctor profile or list page.
+            const params = new URLSearchParams(window.location.search);
+            const urlDoctorId = params.get('doctorId');
+            if (urlDoctorId) {
+                this.doctorId = urlDoctorId;
+            }
+            if (this.doctorId) {
+                const d = this.doctors.find(x => String(x.doctorId) === String(this.doctorId));
+                if (d && !this.hospitalId) this.hospitalId = d.hospitalId;
+                this.reloadAvailabilityAndSlots();
+            } else if (this.hospitalId) {
+                this.reloadAvailabilityAndSlots();
+            }
+            // Validation banner: re-run on every keystroke / change so the
+            // banner updates as the user fixes fields. We only clear entries
+            // the user has now populated, leaving the still-empty ones.
+            this.$watch('hospitalId', () => this.refreshMissingFields());
+            this.$watch('doctorId', () => this.refreshMissingFields());
+            this.$watch('appointmentDate', () => this.refreshMissingFields());
+
+            // Voice fill: probe the server-side STT stack on load so the mic
+            // button shows or hides itself. Non-blocking; UI updates from
+            // the promise resolution.
+            this.probeVoiceAvailability();
+        },
+        beforeUnmount() {
+            this.stopAutoRefresh();
+            if (this._recordingTimer) clearInterval(this._recordingTimer);
+            this.releaseMediaStream();
+        }
+    });
+    app.mount('#bookingApp');
+});
+</script>

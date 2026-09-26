@@ -1,0 +1,52 @@
+<div class="container-fluid">
+    <div class="card">
+        <div class="card-header bg-light">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h5 class="mb-0"><i class="fas fa-file-medical"></i> Medical Reports</h5>
+                </div>
+                <div class="col-auto">
+                    <a th:href="@{/reports/upload}" class="btn btn-primary btn-sm">
+                        <i class="fas fa-upload"></i> Upload Report
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ID</th>
+                            <th>Patient</th>
+                            <th>Report Type</th>
+                            <th>Upload Date</th>
+                            <th>Doctor</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:if="${#lists.isEmpty(reports)}">
+                            <td colspan="6" class="text-center text-muted">No reports found</td>
+                        </tr>
+                        <tr th:each="report : ${reports}">
+                            <td th:text="${report.reportId}"></td>
+                            <td th:text="${report.patientId}"></td>
+                            <td><span class="badge bg-info" th:text="${report.reportType}"></span></td>
+                            <td th:text="${#temporals.format(report.createdAt, 'dd MMM yyyy, hh:mm a')}"></td>
+                            <td th:text="${report.doctorId}"></td>
+                            <td>
+                                <a th:href="@{/reports/view/{id}(id=${report.reportId})}" class="btn btn-sm btn-info">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a th:href="@{/reports/download/{id}(id=${report.fileReference})}" class="btn btn-sm btn-success">
+                                    <i class="fas fa-download"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

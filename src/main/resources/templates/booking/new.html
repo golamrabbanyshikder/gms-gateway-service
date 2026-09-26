@@ -1,0 +1,334 @@
+<div class="container-fluid">
+    <div class="card">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-calendar-plus"></i> Book New Appointment</h5>
+            <div>
+                <button type="button" id="staffMicBtn" class="btn btn-outline-primary btn-sm" title="Voice-fill the form">
+                    <i class="fas fa-microphone"></i> Voice
+                </button>
+                <button type="button" id="staffMicStopBtn" class="btn btn-outline-danger btn-sm d-none" title="Stop">
+                    <i class="fas fa-stop"></i> Stop
+                </button>
+            </div>
+        </div>
+        <div class="card-body" id="bookingApp">
+            <form th:action="@{/booking/create}" method="post" @submit="onSubmit">
+
+                <div class="row mb-3">
+                    <h6 class="text-secondary"><i class="fas fa-user"></i> Patient &amp; Doctor</h6>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Patient <span class="text-danger">*</span></label>
+                        <select class="form-select" name="patientId" v-model="patientId" required>
+                            <option value="">Select patient</option>
+                            <option th:each="p : ${patients}" th:value="${p.patientId}"
+                                    th:text="${p.fullName + ' (ID#' + p.patientId + ' / ' + p.nationalId + ')'}">
+                            </option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Doctor <span class="text-danger">*</span></label>
+                        <select class="form-select" name="doctorId" v-model="doctorId" @change="reloadAvailabilityAndSlots" required>
+                            <option value="">Select doctor</option>
+                            <option th:each="d : ${doctors}" th:value="${d.doctorId}"
+                                    th:text="${d.name + ' - ' + d.specialization}">
+                            </option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <h6 class="text-secondary"><i class="fas fa-clock"></i> Schedule</h6>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Appointment Date <span class="text-danger">*</span></label>
+                        <input type="date" class="form-control" name="appointmentDate"
+                               v-model="appointmentDate" @change="reloadSlots"
+                               th:attr="min=${#temporals.format(#temporals.createNow(),'yyyy-MM-dd')}"
+                               required>
+                        <small v-if="availabilitySummary" class="text-muted">{{ availabilitySummary }}</small>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Preferred Time
+                            <span class="text-muted small">(leave blank to auto-assign)</span>
+                        </label>
+                        <select class="form-select" name="preferredTime" v-model="preferredTime">
+                            <option value="">Auto-assign next open slot</option>
+                            <option v-for="s in slots" :key="s.startTime"
+                                    :value="s.startTime" :disabled="!s.available">
+                                {{ s.startTime }} - {{ s.endTime }}{{ s.available ? '' : ' (booked)' }}
+                            </option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-3 d-flex align-items-end">
+                        <div class="alert alert-info mb-0 w-100 py-2" v-if="slotInfo">
+                            <small>
+                                <strong>Doctor hours:</strong> {{ slotInfo.dayStartTime }} - {{ slotInfo.dayEndTime }}<br>
+                                <strong>Slots:</strong> {{ slotInfo.remainingSlots }} of {{ slotInfo.totalSlots }} remaining
+                                <span v-if="autoRefreshEnabled" class="ms-2 text-success">
+                                    <i class="fas fa-circle" style="font-size:0.5em"></i> Live
+                                </span>
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <h6 class="text-secondary"><i class="fas fa-notes-medical"></i> Visit &amp; Contact</h6>
+                    <div class="col-md-12 mb-3">
+                        <label class="form-label">Reason for Visit (optional)</label>
+                        <textarea id="staffReasonField" class="form-control" name="reasonForVisit" rows="2"
+                                  v-model="reasonForVisit"
+                                  placeholder="e.g. follow-up for hypertension, chest pain, vaccination"></textarea>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Contact Number</label>
+                        <input type="tel" class="form-control" name="contactNumber" v-model="contactNumber">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Contact Email</label>
+                        <input type="email" class="form-control" name="contactEmail" v-model="contactEmail">
+                    </div>
+                </div>
+
+                <div v-if="fullyBooked" class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    আজকের জন্য আর কোনো অ্যাপয়েন্টমেন্ট স্লট খালি নেই। অনুগ্রহ করে পরবর্তী দিন বেছে নিন।
+                    <br><small>(No remaining slots on this date. Please pick another date.)</small>
+                </div>
+
+                <div class="row">
+                    <div class="col-auto">
+                        <button type="submit" class="btn btn-primary" :disabled="fullyBooked || submitting">
+                            <i class="fas fa-save" v-if="!submitting"></i>
+                            <i class="fas fa-spinner fa-spin" v-else></i>
+                            Book Appointment
+                        </button>
+                        <a th:href="@{/booking}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cancel
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- TTS queue banner for missing-field prompts -->
+    <div v-if="ttsQueue.length > 0" class="toast-container position-fixed bottom-0 end-0 p-3"
+         style="z-index: 1080">
+        <div class="toast show align-items-center text-white bg-warning border-warning" role="alert">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="fas fa-volume-up"></i> {{ ttsQueue[0] }}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto"
+                        @click="skipTts"></button>
+            </div>
+        </div>
+    </div>
+
+    <div v-if="globalError" class="alert alert-warning mt-3">
+        <i class="fas fa-exclamation-triangle"></i> {{ globalError }}
+    </div>
+</div>
+
+<script th:inline="javascript">
+document.addEventListener('DOMContentLoaded', function () {
+    // th:inline="javascript" is required for Thymeleaf to substitute the
+    // [[${...}]] expressions below — without it the browser would treat the
+    // substitution sites as JS comments and ALL_DOCTORS would be the literal
+    // [] that follows, leaving the doctor dropdown empty.
+    const ALL_DOCTORS = /*[[${doctors}]]*/ [];
+
+    const app = Vue.createApp({
+        data() {
+            return {
+                patientId: '',
+                doctorId: '',
+                appointmentDate: '',
+                preferredTime: '',
+                reasonForVisit: '',
+                contactNumber: '',
+                contactEmail: '',
+                voiceTranscript: '',
+                translated: false,
+                slots: [],
+                slotInfo: null,
+                fullyBooked: false,
+                doctorName: '',
+                availabilitySummary: '',
+                submitting: false,
+                globalError: '',
+                ttsQueue: [],
+                autoRefreshEnabled: false,
+                _autoRefreshTimer: null
+            };
+        },
+        methods: {
+            async reloadAvailabilityAndSlots() {
+                if (!this.doctorId) return;
+                try {
+                    const r = await fetch('/booking/availability?doctorId=' + this.doctorId + '&days=14');
+                    const data = await r.json();
+                    const open = (data || []).filter(d => !d.fullyBooked && d.remainingSlots > 0).length;
+                    const total = (data || []).length;
+                    this.availabilitySummary = total > 0
+                        ? open + ' of ' + total + ' upcoming days have open slots.'
+                        : '';
+                } catch (e) { this.availabilitySummary = ''; }
+                this.reloadSlots();
+            },
+            reloadSlots() {
+                if (!this.doctorId || !this.appointmentDate) {
+                    this.slots = [];
+                    this.slotInfo = null;
+                    this.fullyBooked = false;
+                    this.stopAutoRefresh();
+                    return;
+                }
+                const url = '/booking/slots?doctorId=' + this.doctorId + '&date=' + this.appointmentDate;
+                fetch(url, { headers: { 'Accept': 'application/json' } })
+                    .then(r => r.ok ? r.json() : Promise.reject(r))
+                    .then(data => {
+                        if (!data.available) {
+                            this.slots = [];
+                            this.slotInfo = null;
+                            this.fullyBooked = true;
+                            this.stopAutoRefresh();
+                            return;
+                        }
+                        this.slots = data.slots;
+                        this.slotInfo = data;
+                        this.fullyBooked = !!data.fullyBooked;
+                        if (this.preferredTime && !this.slots.find(s => s.startTime === this.preferredTime && s.available)) {
+                            this.preferredTime = '';
+                        }
+                        this.startAutoRefresh();
+                    })
+                    .catch(() => {
+                        this.slots = [];
+                        this.slotInfo = null;
+                        this.fullyBooked = true;
+                        this.stopAutoRefresh();
+                    });
+            },
+            startAutoRefresh() {
+                this.stopAutoRefresh();
+                this._autoRefreshTimer = setInterval(() => {
+                    if (!this.doctorId || !this.appointmentDate) { this.stopAutoRefresh(); return; }
+                    fetch('/booking/slots?doctorId=' + this.doctorId + '&date=' + this.appointmentDate,
+                        { headers: { 'Accept': 'application/json' } })
+                        .then(r => r.ok ? r.json() : Promise.reject(r))
+                        .then(data => {
+                            if (!data.available) { this.fullyBooked = true; this.slots = []; return; }
+                            this.slots = data.slots;
+                            this.slotInfo = data;
+                            this.fullyBooked = !!data.fullyBooked;
+                            this.autoRefreshEnabled = true;
+                        }).catch(() => {});
+                }, 10000);
+            },
+            stopAutoRefresh() {
+                this.autoRefreshEnabled = false;
+                if (this._autoRefreshTimer) { clearInterval(this._autoRefreshTimer); this._autoRefreshTimer = null; }
+            },
+            async runVoiceCapture() {
+                const micBtn = document.getElementById('staffMicBtn');
+                const stopBtn = document.getElementById('staffMicStopBtn');
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                if (!SpeechRecognition) {
+                    this.globalError = 'Browser speech recognition not available. Please type the form manually.';
+                    return;
+                }
+                const recognition = new SpeechRecognition();
+                recognition.lang = 'bn-BD';
+                recognition.interimResults = true;
+                recognition.continuous = true;
+                let finalTranscript = '';
+                micBtn.classList.add('d-none');
+                stopBtn.classList.remove('d-none');
+
+                recognition.onresult = (event) => {
+                    let interim = '';
+                    for (let i = event.resultIndex; i < event.results.length; i++) {
+                        if (event.results[i].isFinal) {
+                            finalTranscript += event.results[i][0].transcript;
+                        } else {
+                            interim += event.results[i][0].transcript;
+                        }
+                    }
+                    document.getElementById('staffReasonField').value = (finalTranscript + ' ' + interim).trim();
+                };
+                recognition.onerror = (e) => {
+                    this.globalError = 'Microphone error: ' + (e.error || 'unknown') + '. You can keep typing manually.';
+                };
+                recognition.onend = async () => {
+                    micBtn.classList.remove('d-none');
+                    stopBtn.classList.add('d-none');
+                    if (finalTranscript.trim().length > 0) {
+                        this.voiceTranscript = finalTranscript.trim();
+                        await this.extractFromTranscript(this.voiceTranscript, this.patientId || null);
+                    }
+                };
+                stopBtn.onclick = () => recognition.stop();
+                recognition.start();
+            },
+            async extractFromTranscript(transcript, patientId) {
+                try {
+                    const url = '/booking/voice/extract?transcript=' + encodeURIComponent(transcript)
+                        + (patientId ? '&patientId=' + patientId : '');
+                    const r = await fetch(url, { method: 'POST', headers: { 'Accept': 'application/json' } });
+                    const data = await r.json();
+                    this.translated = !!data.translated;
+                    this.applyExtractedFields(data);
+                } catch (e) {
+                    this.globalError = 'Could not process the voice transcript. Please type the form manually.';
+                }
+            },
+            applyExtractedFields(data) {
+                const f = (data && data.fields) || {};
+                if (f.reasonForVisit) {
+                    const m = f.reasonForVisit.match(/Doctor:\s*([^|]+)/i);
+                    if (m) {
+                        const wanted = m[1].trim().toLowerCase();
+                        const hit = ALL_DOCTORS.find(d => (d.name || '').toLowerCase().includes(wanted));
+                        if (hit) this.doctorId = hit.doctorId;
+                    }
+                }
+                if (f.appointmentDate) { this.appointmentDate = f.appointmentDate; this.reloadSlots(); }
+                if (f.preferredTime) this.preferredTime = String(f.preferredTime).substring(0, 5);
+                if (f.reasonForVisit) {
+                    const cleaned = f.reasonForVisit
+                        .replace(/Specialization:\s*[^|]+\|?/i, '')
+                        .replace(/Doctor:\s*[^|]+\|?/i, '')
+                        .replace(/Hospital:\s*[^|]+\|?/i, '')
+                        .replace(/^\s*\|\s*|\s*\|\s*$/g, '')
+                        .trim();
+                    this.reasonForVisit = cleaned || this.reasonForVisit;
+                }
+                if (f.contactNumber && !this.contactNumber) this.contactNumber = f.contactNumber;
+                this.ttsQueue = (data.clarifyingQuestions || []).slice();
+                this.playTtsQueue();
+            },
+            playTtsQueue() {
+                if (this.ttsQueue.length === 0) return;
+                const next = this.ttsQueue[0];
+                const audio = new Audio('/tts/speak?text=' + encodeURIComponent(next) + '&lang=bn');
+                audio.onended = () => { this.ttsQueue.shift(); this.playTtsQueue(); };
+                audio.onerror = () => { this.ttsQueue.shift(); this.playTtsQueue(); };
+                audio.play().catch(() => {});
+            },
+            skipTts() { this.ttsQueue = []; },
+            onSubmit() { this.submitting = true; return true; }
+        },
+        mounted() {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('doctorId')) this.doctorId = params.get('doctorId');
+            if (params.get('date')) this.appointmentDate = params.get('date');
+            if (params.get('patientId')) this.patientId = params.get('patientId');
+            this.reloadSlots();
+            document.getElementById('staffMicBtn').addEventListener('click', () => this.runVoiceCapture());
+        },
+        beforeUnmount() { this.stopAutoRefresh(); }
+    });
+    app.mount('#bookingApp');
+});
+</script>

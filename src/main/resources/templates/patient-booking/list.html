@@ -1,0 +1,56 @@
+<div class="container-fluid">
+    <div class="card">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-calendar-alt"></i> My Appointments</h5>
+            <a th:href="@{/patient/booking/new}" class="btn btn-primary btn-sm">
+                <i class="fas fa-plus"></i> Book New
+            </a>
+        </div>
+        <div class="card-body">
+            <div th:if="${#lists.isEmpty(appointments)}" class="alert alert-info">
+                You have no appointments yet.
+                <a th:href="@{/patient/booking/new}" class="alert-link">Book your first appointment</a>.
+            </div>
+            <div class="table-responsive" th:unless="${#lists.isEmpty(appointments)}">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Doctor</th>
+                            <th>Date</th>
+                            <th>Time</th>
+                            <th>Status</th>
+                            <th>Reason</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="a : ${appointments}">
+                            <td th:text="${doctorNames.get(a.doctorId)}">Doctor</td>
+                            <td th:text="${#temporals.format(a.appointmentDate, 'dd MMM yyyy')}">Date</td>
+                            <td th:text="${#temporals.format(a.startTime, 'HH:mm') + ' - ' + #temporals.format(a.endTime, 'HH:mm')}">Time</td>
+                            <td>
+                                <span class="badge"
+                                      th:classappend="${a.status == 'SCHEDULED'} ? 'bg-primary'
+                                        : (${a.status == 'CONFIRMED'} ? 'bg-info'
+                                        : (${a.status == 'COMPLETED'} ? 'bg-success'
+                                        : (${a.status == 'CANCELLED'} ? 'bg-secondary' : 'bg-warning')))"
+                                      th:text="${a.status}">Status</span>
+                            </td>
+                            <td th:text="${a.reasonForVisit}">—</td>
+                            <td>
+                                <!-- Patient can cancel until the appointment is CONFIRMED by
+                                     the doctor/receptionist - past that, they have to call. -->
+                                <form th:if="${a.status == 'SCHEDULED'}" th:action="@{/patient/booking/{id}/cancel(id=${a.appointmentId})}" method="post" style="display:inline-block">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger"
+                                            onclick="return confirm('Cancel this appointment?')">
+                                        <i class="fas fa-times"></i> Cancel
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

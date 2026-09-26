@@ -1,0 +1,38 @@
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <div th:if="${report == null}" class="alert alert-warning">Report not found.</div>
+            <div th:if="${report != null}" class="card">
+                <div class="card-header bg-light">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <h5 class="mb-0"><i class="fas fa-file-medical"></i> Report Details</h5>
+                        </div>
+                        <div class="col-auto">
+                            <a th:href="@{/reports/download/{id}(id=${report.reportId})}" class="btn btn-success btn-sm">
+                                <i class="fas fa-download"></i> Download
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Report ID:</strong> <span th:text="${report.reportId}"></span></p>
+                            <p><strong>Patient ID:</strong> <span th:text="${report.patientId}"></span></p>
+                            <p><strong>Doctor ID:</strong> <span th:text="${report.doctorId}"></span></p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Type:</strong> <span class="badge bg-info" th:text="${report.reportType}"></span></p>
+                            <p><strong>File Name:</strong> <span th:text="${report.fileName}"></span></p>
+                            <p><strong>Uploaded:</strong> <span th:text="${#temporals.format(report.createdAt, 'dd MMM yyyy, hh:mm a')}"></span></p>
+                        </div>
+                    </div>
+                    <a th:href="@{/reports}" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-arrow-left"></i> Back to List
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

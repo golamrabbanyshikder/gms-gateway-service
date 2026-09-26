@@ -1,0 +1,35 @@
+# ====== Maven build output ======
+target/
+*.class
+*.jar
+*.war
+*.ear
+
+# ====== IDE ======
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+.project
+.classpath
+.settings/
+
+# ====== OS ======
+.DS_Store
+Thumbs.db
+
+# ====== Patient data — কখনো push হবে না (PHI/HIPAA) ======
+uploads/*
+!uploads/.gitkeep
+!uploads/files/.gitkeep
+
+# ====== Local config — secrets থাকে ======
+application-local.properties
+application-local.yml
+.env
+.env.local
+
+# ====== Logs ======
+*.log
+logs/

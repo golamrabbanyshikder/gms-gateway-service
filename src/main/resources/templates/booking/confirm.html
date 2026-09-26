@@ -1,0 +1,61 @@
+<div class="container-fluid">
+    <div class="card border-success">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0"><i class="fas fa-check-circle"></i> Appointment Confirmed</h5>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-success">
+                <i class="fas fa-calendar-check"></i>
+                The appointment has been booked successfully.
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    <h6 class="text-secondary">Patient</h6>
+                    <p th:text="${patientName}">Patient</p>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="text-secondary">Doctor</h6>
+                    <p th:text="${doctorName}">Doctor</p>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="text-secondary">Hospital</h6>
+                    <p th:text="${hospitalName}">Hospital</p>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="text-secondary">Slot</h6>
+                    <p>
+                        <strong th:text="${#temporals.format(appointment.appointmentDate, 'EEEE, dd MMM yyyy')}">Date</strong>
+                        &nbsp;at&nbsp;
+                        <strong th:text="${#temporals.format(appointment.startTime, 'HH:mm') + ' - ' + #temporals.format(appointment.endTime, 'HH:mm')}">Time</strong>
+                    </p>
+                </div>
+                <div class="col-md-6" th:if="${appointment.reasonForVisit != null and appointment.reasonForVisit != ''}">
+                    <h6 class="text-secondary">Reason for Visit</h6>
+                    <p th:text="${appointment.reasonForVisit}">Reason</p>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="text-secondary">Booked By</h6>
+                    <p>
+                        <span class="badge bg-info" th:text="${appointment.bookedBy}">Actor</span>
+                        <span th:text="${appointment.bookedByUsername}">User</span>
+                    </p>
+                </div>
+                <div class="col-md-12" th:if="${appointment.voiceTranscript != null and appointment.voiceTranscript != ''}">
+                    <h6 class="text-secondary">Original Voice Transcript</h6>
+                    <blockquote class="blockquote">
+                        <p class="mb-0" th:text="${appointment.voiceTranscript}">Transcript</p>
+                    </blockquote>
+                </div>
+            </div>
+            <hr>
+            <div>
+                <a th:href="@{/booking/new}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Book Another
+                </a>
+                <a th:href="@{/booking/list}" class="btn btn-secondary">
+                    <i class="fas fa-list"></i> View All Appointments
+                </a>
+            </div>
+        </div>
+    </div>
+</div>

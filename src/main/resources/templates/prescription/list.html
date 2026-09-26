@@ -1,0 +1,52 @@
+<div class="container-fluid">
+    <div class="card">
+        <div class="card-header bg-light">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h5 class="mb-0"><i class="fas fa-prescription-bottle"></i> Prescriptions</h5>
+                </div>
+                <div class="col-auto">
+                    <a th:href="@{/prescriptions/create}" class="btn btn-primary btn-sm">
+                        <i class="fas fa-plus"></i> New Prescription
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ID</th>
+                            <th>Patient</th>
+                            <th>Doctor</th>
+                            <th>Created Date</th>
+                            <th>Follow-up</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:if="${#lists.isEmpty(prescriptions)}">
+                            <td colspan="6" class="text-center text-muted">No prescriptions found</td>
+                        </tr>
+                        <tr th:each="prescription : ${prescriptions}">
+                            <td th:text="${prescription.prescriptionId}"></td>
+                            <td th:text="${prescription.patientId}"></td>
+                            <td th:text="${prescription.doctorId}"></td>
+                            <td th:text="${#temporals.format(prescription.createdAt, 'dd MMM yyyy, hh:mm a')}"></td>
+                            <td th:text="${#temporals.format(prescription.followUpDate, 'dd MMM yyyy')}"></td>
+                            <td>
+                                <a th:href="@{/prescriptions/view/{id}(id=${prescription.prescriptionId})}" class="btn btn-sm btn-info">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a th:href="@{/prescriptions/print/{id}(id=${prescription.prescriptionId})}" class="btn btn-sm btn-secondary">
+                                    <i class="fas fa-print"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

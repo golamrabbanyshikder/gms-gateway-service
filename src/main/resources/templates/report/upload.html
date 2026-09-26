@@ -1,0 +1,97 @@
+<div class="container-fluid">
+    <div class="card">
+        <div class="card-header bg-light">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h5 class="mb-0"><i class="fas fa-file-upload"></i> Upload Medical Report</h5>
+                </div>
+                <div class="col-auto">
+                    <a th:href="@{/reports}" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-list"></i> View All Reports
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div th:if="${error}" class="alert alert-danger">
+                <i class="fas fa-exclamation-circle"></i> <span th:text="${error}"></span>
+            </div>
+            <form th:action="@{/reports/upload}" method="post" enctype="multipart/form-data">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="patientId" class="form-label">Select Patient</label>
+                        <select class="form-control" id="patientId" name="patientId" required>
+                            <option value="">Select Patient</option>
+                            <option th:each="patient : ${patients}" th:value="${patient.patientId}"
+                                    th:selected="${preselectedPatientId != null and preselectedPatientId == patient.patientId}"
+                                    th:text="${patient.fullName} + ' (ID: ' + ${patient.patientId} + ')'"></option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="reportType" class="form-label">Report Type</label>
+                        <select class="form-control" id="reportType" name="reportType" required>
+                            <option value="">Select Report Type</option>
+                            <option value="Lab Test">Lab Test</option>
+                            <option value="X-Ray">X-Ray</option>
+                            <option value="CT Scan">CT Scan</option>
+                            <option value="Ultrasound">Ultrasound</option>
+                            <option value="MRI">MRI</option>
+                            <option value="ECG">ECG</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label for="hospitalFilter" class="form-label">Hospital</label>
+                        <select class="form-control" id="hospitalFilter" required>
+                            <option value="">Select Hospital</option>
+                            <option th:each="hospital : ${hospitals}" th:value="${hospital.hospitalId}"
+                                    th:text="${hospital.hospitalName}"></option>
+                        </select>
+                        <small class="text-muted">Used only to narrow the doctor list below - not saved on the report.</small>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="specialization" class="form-label">Doctor Category</label>
+                        <select class="form-control" id="specialization" required disabled>
+                            <option value="">Select Hospital First</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="doctorId" class="form-label">Doctor</label>
+                        <select class="form-control" id="doctorId" name="doctorId" required disabled>
+                            <option value="">Select Category First</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="reportFile" class="form-label">Select File</label>
+                    <input type="file" id="reportFile" name="reportFile" class="form-control"
+                           accept=".pdf,.jpg,.png,.docx" required>
+                    <small class="text-muted">Accepted formats: PDF, JPG, PNG, DOCX (Max 10MB)</small>
+                </div>
+
+                <div class="row">
+                    <div class="col-auto">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-upload"></i> Upload Report
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script th:src="@{/js/hospital-doctor-cascade.js}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        initHospitalDoctorCascade({
+            hospitalSelectId: 'hospitalFilter',
+            specializationSelectId: 'specialization',
+            doctorSelectId: 'doctorId'
+        });
+    });
+</script>

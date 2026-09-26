@@ -1,0 +1,66 @@
+<div class="container-fluid">
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0"><i class="fas fa-virus"></i> Add Disease</h5>
+        </div>
+        <div class="card-body">
+            <p class="text-muted small">
+                Diseases added here appear as selectable checkboxes on Create / Upload Prescription, so prescriptions are
+                tagged consistently instead of free-text disease names drifting in spelling.
+            </p>
+
+            <div th:if="${error}" class="alert alert-danger">
+                <i class="fas fa-exclamation-circle"></i> <span th:text="${error}"></span>
+            </div>
+
+            <form th:action="@{/diseases/create}" method="post" class="row g-2">
+                <div class="col-auto">
+                    <input type="text" class="form-control" name="name" placeholder="e.g. Hypertension" required>
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Add
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header bg-light">
+            <h5 class="mb-0"><i class="fas fa-list"></i> Diseases</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Name</th>
+                            <th>Added</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:if="${#lists.isEmpty(diseases)}">
+                            <td colspan="3" class="text-center text-muted">No diseases added yet</td>
+                        </tr>
+                        <tr th:each="disease : ${diseases}">
+                            <td th:text="${disease.name}"></td>
+                            <td th:text="${#temporals.format(disease.createdAt, 'dd MMM yyyy, hh:mm a')}"></td>
+                            <td>
+                                <a th:href="@{/diseases/edit/{id}(id=${disease.diseaseId})}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-edit"></i> Edit
+                                </a>
+                                <form th:action="@{/diseases/delete/{id}(id=${disease.diseaseId})}" method="post" class="d-inline">
+                                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Delete this disease? Existing prescriptions keep their stored value, but it will no longer be selectable.');">
+                                        <i class="fas fa-trash"></i> Delete
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,46 @@
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <div th:if="${prescription == null}" class="alert alert-warning">Prescription not found.</div>
+            <div th:if="${prescription != null}" class="card">
+                <div class="card-header bg-light">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <h5 class="mb-0"><i class="fas fa-prescription-bottle"></i> Prescription Details</h5>
+                        </div>
+                        <div class="col-auto">
+                            <a th:href="@{/prescriptions/print/{id}(id=${prescription.prescriptionId})}" class="btn btn-secondary btn-sm">
+                                <i class="fas fa-print"></i> Print
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Prescription ID:</strong> <span th:text="${prescription.prescriptionId}"></span></p>
+                            <p><strong>Patient ID:</strong> <span th:text="${prescription.patientId}"></span></p>
+                            <p><strong>Doctor ID:</strong> <span th:text="${prescription.doctorId}"></span></p>
+                            <p><strong>Hospital ID:</strong> <span th:text="${prescription.hospitalId}"></span></p>
+                            <p th:if="${prescription.diseases != null and not #strings.isEmpty(prescription.diseases)}">
+                                <strong>Diseases:</strong> <span th:text="${prescription.diseases}"></span>
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Created:</strong> <span th:text="${#temporals.format(prescription.createdAt, 'dd MMM yyyy, hh:mm a')}"></span></p>
+                            <p><strong>Follow-up Date:</strong> <span th:text="${#temporals.format(prescription.followUpDate, 'dd MMM yyyy')}"></span></p>
+                        </div>
+                    </div>
+                    <hr>
+                    <h6 class="text-secondary">Medicines</h6>
+                    <p th:text="${prescription.medicineList}"></p>
+                    <h6 class="text-secondary">Instructions</h6>
+                    <p th:text="${prescription.instructions}"></p>
+                    <a th:href="@{/prescriptions}" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-arrow-left"></i> Back to List
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
